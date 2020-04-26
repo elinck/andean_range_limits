@@ -15,23 +15,24 @@ alternate hypotheses, which might apply to all species pairs or
 different species pairs individually:
 
 **H1: Elevational generalists have shallower blood parameter slopes than
-elevational specialists** **Prediction:** Species with broad elevational
-ranges show less change across elevation in haemoglobin and haematocrit
-concentration due to enchanced phenotypic plasticity (elevational range
-breadth is negatively correlated with slope of blood parameters)
+elevational specialists:**  
+**Prediction:** Species with broad elevational ranges show less change
+across elevation in haemoglobin and haematocrit concentration due to
+enchanced phenotypic plasticity (elevational range breadth is negatively
+correlated with slope of blood parameters)
 
 **H2: Elevational generalists have steeper blood parameter slopes than
-elevational specialists**: **Prediction:** Species with broad
-elevational ranges show more change across elevation in haemoglobin and
-haematocrit concentration, as they have an enchanced ability to adapt to
-local conditions, perhaps due to reduced gene flow from range center to
-edge (elevational range breadth is positively correlated with slope of
-blood parameters)
+elevational specialists**:  
+**Prediction:** Species with broad elevational ranges show more change
+across elevation in haemoglobin and haematocrit concentration, as they
+have an enchanced ability to adapt to local conditions, perhaps due to
+reduced gene flow from range center to edge (elevational range breadth
+is positively correlated with slope of blood parameters)
 
 **H0: No difference in blood parameter slopes between generalists and
-specalists**: **Prediction:** Adaptation across elevation unrelated to
-range limits (no relationship between range breadth and slope of blood
-parameters)
+specalists**:  
+**Prediction:** Adaptation across elevation unrelated to range limits
+(no relationship between range breadth and slope of blood parameters)
 
 (Note: these predictions don’t address *variance* in parameter slope
 across elevational range breadth, which may be important.)
@@ -46,7 +47,8 @@ library(magrittr)
 source("~/Dropbox/andean_range_limits/scripts/00_functions.R")
 
 # load data
-blood_df <- read.csv("~/Dropbox/andean_range_limits/data/blood_data.csv", stringsAsFactors = FALSE)
+blood_df <- read.csv("~/Dropbox/andean_range_limits/data/blood_data.csv", 
+                     stringsAsFactors = FALSE)
 
 # subset columns of interest
 blood_df <- cbind.data.frame(blood_df$Scientific.name, 
@@ -127,7 +129,8 @@ there’s not a taxonomy match with the Stotz table.
 
 ``` r
 stotz <- read.csv("~/Dropbox/andean_range_limits/data/stotz_elevation_data.csv")
-stotz <- cbind.data.frame(stotz$GENUS, stotz$SPECIES, stotz$MIN, stotz$MAX, stotz$MIDPT.ELEV)
+stotz <- cbind.data.frame(stotz$GENUS, stotz$SPECIES, 
+                          stotz$MIN, stotz$MAX, stotz$MIDPT.ELEV)
 colnames(stotz) <- c("genus","species","elev_min","elev_max","elev_midpt")
 stotz$binomial <- paste0(stotz$genus, " ", stotz$species)
 blood_df <- merge(blood_df, stotz, by.x = "species", by.y = "binomial", all.x=TRUE)
@@ -231,8 +234,7 @@ print(missing)
     ## [11] "Spinus magellanicus"         "Troglodytes aedon"
 
 All can be explained by taxonomic changes and / or typos. Eyeballing the
-Stotz data, we can fill in the gaps tediously (I’ll spare you the code
-for now).
+Stotz data, we can fill in the gaps tediously.
 
 ``` r
 blood_df_sub[blood_df_sub$species==missing[1],][12] <- 2350 #Anairetes nigrocristatus
@@ -346,7 +348,7 @@ head(slope_df)
     ## 2       1100 specialist  7.218237
     ## 3       1200 specialist  1.307283
     ## 4       1250 specialist 15.642449
-    ## 5       1850    neither  9.359106
+    ## 5       1850    neither  9.359105
     ## 6       2900 generalist 14.318950
 
 As a first pass, let’s look at the relationship between slope of

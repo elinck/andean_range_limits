@@ -1,6 +1,6 @@
 ---
 title: "Andean bird blood data exploration"
-output: github_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -9,7 +9,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Introduction
 
-What constrains elevational range limits in the absence of an ecotone or obvious biotic constraints? One *abiotic* factor that falls under what Terborgh& Weske (1975) called constraints that vary "continuously and in parallel with the elevational gradient" is the partial pressure of oxygen (PO2), which declines roughly linearly with altitude is an intense selective pressure.
+What constrains elevational range limits in the absence of an ecotone or obvious biotic constraints? One *abiotic* factor that falls under what Terborgh& Weske (1975) called constraints that vary "continuously and in parallel with the elevational gradient" is the partial pressure of oxygen (PO2), which declines roughly linearly with altitude and is an strong selective pressure.
 
 ```{r, echo=FALSE, warning=FALSE, fig.height=3,fig.width=4}
 library(ggplot2)

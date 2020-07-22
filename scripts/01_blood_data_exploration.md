@@ -7,8 +7,8 @@ What constrains elevational range limits in the absence of an ecotone or
 obvious biotic constraints? One *abiotic* factor that falls under what
 Terborgh& Weske (1975) called constraints that vary “continuously and in
 parallel with the elevational gradient” is the partial pressure of
-oxygen (PO2), which declines roughly linearly with altitude is an
-intense selective pressure.
+oxygen (PO2), which declines roughly linearly with altitude and is an
+strong selective pressure.
 
 ![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
 

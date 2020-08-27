@@ -1,3 +1,19 @@
+# approximation for water vapor pressure
+water_vapor_pressure <- function(temp_celsius, humidity){
+  temp_kelvin <- temp_celsius + 273.15
+  wvp <- exp(20.386-(5132/temp_kelvin))*(humidity/100)
+  return(wvp)
+}
+
+# coefficient of variation function
+cv <- function(data){
+  mean <- mean(data)
+  sd <- sd(data)
+  coef <- sd/mean
+  return(coef)
+}
+  
+
 # calculate slope and variance of blood parameters; species' range mean attributes
 blood_slope <- function(input_object){
   
@@ -8,6 +24,7 @@ blood_slope <- function(input_object){
     species <- unique(tmp$species)
     med_elev <- unique(tmp$elev_min) + unique(tmp$elev_range)/2
     elev_range <- unique(tmp$elev_range)
+    sampling_range  <- max(tmp$elevation) - min(tmp$elevation) 
     mass <- mean(tmp$mass, na.rm = TRUE)
     n <- nrow(tmp) # get sample size
     n.elev <- length(unique(tmp$elevation)) # get number of unique elevation localities
@@ -28,7 +45,7 @@ blood_slope <- function(input_object){
     se.mchc <- mod.mchc.sum$coefficients[2,2] # get hct SE
     species_list[[i]] <- cbind.data.frame(species,n,n.elev,slope.hb,r2.hb,se.hb,
                                           slope.hct,r2.hct,se.hct,slope.mchc,r2.mchc,se.mchc,
-                                          elev_range,med_elev,mass)
+                                          elev_range,sampling_range,med_elev,mass)
   }
   
   # assemble dataframe
@@ -36,41 +53,59 @@ blood_slope <- function(input_object){
   rownames(data.blood.df) <- NULL
   colnames(data.blood.df) <- c("species","sample_size","unique_elevations","slope_hb","r2_hb","error_hb",
                                "slope_hct","r2_hct","error_hct","slope_mchc","r2_mchc","error_mchc",
-                               "elev_range","median_elevation","mass")
+                               "elev_range","sampling_range","median_elevation","mass")
   return(data.blood.df)
 
 }
 
 # calculate variance of blood parameters + species' range mean attributes
-blood_variance <- function(input_object){
-  
+blood_variance <- function(input_object, min_bin){ 
+
   # loop to get mean mass change per species
   species_list <- list()
   for(i in unique(input_object$species)){
+    #print(i) 
     tmp <- input_object[input_object$species==i,]
-    species <- unique(tmp$species)
-    med_elev <- unique(tmp$elev_min) + unique(tmp$elev_range)/2
-    elev_range <- unique(tmp$elev_range)
-    mass <- mean(tmp$mass, na.rm = TRUE)
-    n <- nrow(tmp) # get sample size
-    n.elev <- length(unique(tmp$elevation)) # get number of unique elevation localities
     tt <- table(tmp$binID)
-    best_bin <- names(tt[which.max(tt)])
-    tmp <- tmp[tmp$binID==best_bin,]
-    range_position <- mean(tmp$range_position)
-    edge_distance <- mean(tmp$edge_distance)
-    var.hb <- var(tmp$hb)
-    var.hct <- var(tmp$hct)
-    var.mchc <- var(tmp$MCHC_calculated)
-    if(nrow(tmp)>4){species_list[[i]] <- cbind.data.frame(species,n,n.elev,range_position,edge_distance,var.hb,var.hct,
-                                          var.mchc,elev_range,med_elev,mass)}
+    best_bins <- tt[tt>min_bin] # use only the 100 m elevation bins passing the data cutoff
+    tt <- tt[tt>min_bin] %>% as.data.frame() 
+    if(dim(tt)[2]==1){ # need to add an extra column if there is only one bin
+      tt$binID <- rownames(tt) 
+      colnames(tt) <- c("Freq","binID")
+    } else { # otherwise we just need to assign columns
+      colnames(tt) <- c("binID","Freq")
+    }
+    tmp <- tmp[tmp$binID %in% names(best_bins),]
+    tmp <- merge(tmp, tt, by.x = "binID", by.y = "binID")
+    if(nrow(tt)>0){
+      include <- "yes"
+      range_position <- aggregate(range_position ~ binID, tmp, mean) %>% select(range_position) %>% as.vector() # realtive position of bin
+      edge_distance <- aggregate(edge_distance ~ binID, tmp, mean) %>% select(edge_distance) %>% as.vector() # edge distance of bin
+      var.hb <- aggregate(hb ~ binID, tmp, cv) %>% select(hb) %>% as.vector() # hb variance per bin
+      var.hct <- aggregate(hct ~ binID, tmp, cv) %>% select(hct) %>% as.vector() # hct variance per bin
+      var.mchc <- aggregate(MCHC_calculated ~ binID, tmp, cv) %>% select(MCHC_calculated) %>% as.vector() # mchc variance per bin
+      species <- unique(tmp$species) %>% rep(., nrow(var.hb)) # species ID
+      med_elev <- unique(tmp$elev_min) + unique(tmp$elev_range)/2  %>% rep(., nrow(var.hb)) # median species range elevation
+      bin_elev <- aggregate(elevation ~ binID, tmp, mean) %>% select(elevation) %>% as.vector() # mean bin elevation
+      elev_range <- unique(tmp$elev_range)  %>% rep(., nrow(var.hb))  # mean mass of species
+      mass <- mean(tmp$mass, na.rm = TRUE)  %>% rep(., nrow(var.hb)) # mean mass of species
+      n <- aggregate(Freq ~ binID, tmp, mean) %>% select(Freq) %>% as.vector() # sample size per bin
+      n.elev <- length(unique(tmp$elevation))  %>% rep(., nrow(var.hb)) # number of unique elevation localities per species
+    } else {
+      include <- "no"
+      }
+    if(include=="yes")
+      {species_list[[i]] <- cbind.data.frame(species,n,n.elev,range_position,
+                                             edge_distance,var.hb,var.hct,
+                                          var.mchc,elev_range,med_elev,bin_elev,mass)}
   }
     
     # assemble dataframe
     data.blood.df <- do.call(rbind, species_list)
     rownames(data.blood.df) <- NULL
     colnames(data.blood.df) <- c("species","sample_size","unique_elevations","range_position","edge_distance",
-                                 "variance_hb","variance_hct","variance_mchc","elev_range","median_elevation","mass")
+                                 "variance_hb","variance_hct","variance_mchc","elev_range","median_elevation","bin_elevation",
+                                 "mass")
     return(data.blood.df)
 }
 
@@ -133,5 +168,40 @@ outliers_limits <- function(dataframe, min_sample, min_limit, min_range){
   }
   elev_cutoff <- as.vector(elev_cutoff)
   dataframe <- dataframe[dataframe$species %in% elev_cutoff,]
+  return(dataframe)
+}
+
+# calculate 95% and 89% credible intervals and turn into color code from posterior dist
+credibility_coder <- function(dataframe){
+  
+  # calculate lower and upper bounds, merge with data
+  hct_lb_95 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.025)))
+  hct_ub_95 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.975)))
+  bounds_95 <- merge(hct_lb_95, hct_ub_95, by.x = ".variable", by.y = ".variable")
+  colnames(bounds_95) <- c(".variable", "lower_95", "upper_95")
+  hct_lb_89 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.055)))
+  hct_ub_89 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.945)))
+  bounds_89 <- merge(hct_lb_89, hct_ub_89, by.x = ".variable", by.y = ".variable")
+  colnames(bounds_89) <- c(".variable", "lower_89", "upper_89")
+  bounds <- cbind.data.frame(bounds_95, bounds_89)[,-4]
+  
+  dataframe <- merge(dataframe, bounds, by.x = ".variable", by.y = ".variable")
+  
+  # turn into color codes based on credibility 
+  dataframe <- dataframe %>% mutate(
+    credible = case_when(
+      lower_95>0 & upper_95>0 ~ 1,
+      lower_95<0 & upper_95<0 ~ 1,
+      lower_89>0 & upper_89>0 ~ 2,
+      lower_89<0 & upper_89<0 ~ 2,
+      lower_89>0 & upper_89<0 | lower_95>0 & upper_95<0 ~ 0,
+      lower_89<0 & upper_89>0 | lower_95<0 & upper_95>0 ~ 0
+    )
+  )
+  
+  # make factor
+  dataframe$credible <- as.factor(dataframe$credible)
+  
+  # output
   return(dataframe)
 }

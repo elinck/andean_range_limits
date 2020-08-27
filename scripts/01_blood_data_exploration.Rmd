@@ -11,25 +11,72 @@ knitr::opts_chunk$set(echo = TRUE)
 
 What constrains elevational range limits in the absence of an ecotone or obvious biotic constraints? One *abiotic* factor that falls under what Terborgh& Weske (1975) called constraints that vary "continuously and in parallel with the elevational gradient" is the partial pressure of oxygen (PO2), which declines roughly linearly with altitude and is an strong selective pressure.
 
-```{r, echo=FALSE, warning=FALSE, fig.height=3,fig.width=4}
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=4,fig.width=8}
+# libraries
 library(ggplot2)
-p <- function(x) 760*exp(-(0.0289644*9.81)/(8.3143*288.15)*x)
+library(cowplot)
+library(tidyverse, quietly = TRUE)
 
-ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+# load functions script
+source("~/Dropbox/andean_range_limits/scripts/00_functions.R")
+
+# calculate water vapor pressure based on temperature and humidity
+wvp <- water_vapor_pressure(temp_celsius = 15, humidity = 20)
+
+# assign coefficients for formulae
+sea_level_pressure <- 760 # in mmHg
+mass <- 0.0289644 # molar mass of gas in kg/mol
+gravity <- 9.81 # acceleration due to gravity in m/s2
+gas_constant <- 8.3145 #J/molK
+temp_kelvin <- 15 + 273.15 # assuming 15C here
+mbar_conversion <- 1.33322 # convert mmHg to mbar
+o2 <- 0.2095 # proportion o2 in atmosphere
+max_o2 <- ((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*0)*mbar_conversion)-wvp)*o2
+
+# barometric formula
+p <- function(x) sea_level_pressure *exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion
+o <- function(x) ((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion)-wvp)*o2
+po2 <-function(x) (((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion)-wvp)*o2/max_o2)*100
+
+n1 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
   theme_bw() +
-  stat_function(fun = p, aes(linetype="mmHg"),color="red") +
+  stat_function(fun = p, aes(linetype="Atmospheric Pressure")) +
+  stat_function(fun = o, aes(linetype="PO2")) +
+  scale_linetype_discrete(labels=c("Atm", 
+                                   expression(PO[2]))) +
+  theme(panel.grid = element_blank()) +
+  xlim(0,8000) +
+  #ylim(0,1200) +
+  xlab("Elevation (m)") +
+  ylab("Millibars") +
+  labs(linetype=element_blank()) +
+  theme(legend.position = c(0.8, 0.9))
+
+n2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+  theme_bw() +
+  stat_function(fun = po2) +
   scale_linetype_discrete(guide=FALSE) +
   theme(panel.grid = element_blank()) +
-  ylab("mmHg") +
-  xlim(0,8000) +
-  ylim(0,1000) +
+  xlim(0,9500) +
+  ylim(0,100) +
+  geom_vline(xintercept = 1619, size=3, alpha=0.3) +
+  geom_text(aes(x=1319, label="Albuquerque, NM: 82%", y=20), angle=90, size=3) +
+  geom_vline(xintercept = 3982, size=3, alpha=0.2) +
+  geom_text(aes(x=3682, label="Mt. Wheeler, NM: 62%", y=20), angle=90, size=3) +
+  geom_vline(xintercept = 6768, size=3, alpha=0.1) +
+  geom_text(aes(x=6468, label="Huascarán, Peru: 44%", y=20), angle=90, size=3) +
+  geom_text(aes(x=8300, label="15°C, 20% humidity", y=100,), size=3) +
   xlab("Elevation (m)") +
-  ylab("Atmospheric pressure (mmHg)")
+  ylab(expression(paste("% sea level ", PO[2]))) +
+  labs(linetype=element_blank()) +
+  theme(legend.position = c(0.8, 0.9))
+
+plot_grid(n1, n2)
 ```
 
 In this analysis, we're using a large dataset of blood trait values (total blood hemoglobin concentration, haematocrit, or the volume percentage of red blood cells in blood, and MCHC, or mean cellular hemoglobin concentration) to try and understand a little bit better why tropical birds have such narrow elevational ranges. How narrow, you ask? Here's a visualization of the distribution of elevational range breadth using data from the 3,752 neotropical bird  species in [Parker et al. 1996](https://www.press.uchicago.edu/ucp/books/book/chicago/E/bo3618705.html) (what Chris calls the "Stotz" data)".
 
-```{r, message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 # load libraries
 library(tidyverse, quietly = TRUE)
 library(magrittr)
@@ -74,6 +121,8 @@ More specifically, we're interested in the following questions:
 3) Is the median elevation of a species' range associated with either of these variables?
 
 To begin, we're going to load our data, take a look at it, and make some filtering choices.  
+
+### Cleaning
 
 ```{r, message=FALSE, warning=FALSE}
 # load data
@@ -168,15 +217,61 @@ blood_df <- blood_df %>% mutate(hct_percent = hct*100)
 blood_df <- blood_df %>% mutate(MCHC_calculated = (hb/hct_percent)*100) # Calculated MCHC
 ```
 
-Next, let's do some basic filtering, and drop extreme blood parameter values. We'll then drop species with fewer than 8 records: 
+Next, let's do some basic filtering, and drop extreme blood parameter values. 
+
+We'll first look at the distribution of blood trait values across all species, using a tidyverse-friendly version of the dataframe:
+
+```{r, message=FALSE, warning=FALSE}
+blood_tidy <- blood_df %>% pivot_longer(c(hb, hct, MCHC_calculated), 
+                                        names_to = "key", values_to = "value")
+```
+```{r,echo=FALSE}
+s1 <- ggplot(blood_tidy, aes(x=value)) + 
+  theme_bw() +
+  facet_wrap(~key, scales="free_x") +
+  geom_histogram() +
+  theme(panel.grid = element_blank())
+
+s2 <- ggplot(blood_tidy, aes(sample=value)) + 
+  theme_bw() +
+  facet_wrap(~key, scales="free_y") +
+  stat_qq() +
+  theme(panel.grid = element_blank())
+
+plot_grid(s1,s2,nrow=2)
+```
+
+Using these plots to inform our cutoffs, let's drop outliers / somewhat normalize distributions:
 
 ```{r,  message=FALSE, warning=FALSE}
-blood_df_sub <- blood_df[which(blood_df$hb >= 14 &  blood_df$hb <= 25),]
-blood_df_sub <- blood_df_sub[which(blood_df_sub$hct >= 0.35 &  
-                                     blood_df_sub$hct <= 0.72),]
-blood_df_sub <- blood_df_sub[which(blood_df_sub$MCHC_calculated >= 20 
-                                   & blood_df_sub$hct <= 42),] 
+blood_df_sub <- blood_df[which(blood_df$hb >= 8 &  blood_df$hb <= 25),]
+blood_df_sub <- blood_df_sub[which(blood_df_sub$hct >= 0.3 &  
+                                     blood_df_sub$hct <= 0.8),]
+blood_df_sub <- blood_df_sub[which(blood_df_sub$MCHC_calculated >= 22 
+                                   & blood_df_sub$MCHC <= 42),] 
+blood_tidy <- blood_df_sub %>% pivot_longer(c(hb, hct, MCHC_calculated), 
+                                            names_to = "key", values_to = "value")
 
+```
+```{r,echo=FALSE}
+s1 <- ggplot(blood_tidy, aes(x=value)) + 
+  theme_bw() +
+  facet_wrap(~key, scales="free_x") +
+  geom_histogram() +
+  theme(panel.grid = element_blank())
+
+s2 <- ggplot(blood_tidy, aes(sample=value)) + 
+  theme_bw() +
+  facet_wrap(~key, scales="free_y") +
+  stat_qq() +
+  theme(panel.grid = element_blank())
+
+plot_grid(s1,s2,nrow=2)
+```
+
+Looking much better. We'll then drop species with fewer than 8 records: 
+
+```{r, message=FALSE, warning=FALSE}
 sp_list <- c()
 for(i in blood_df_sub$species){
   tmp <- blood_df_sub[blood_df_sub$species==i,]
@@ -274,14 +369,14 @@ for(i in unique(blood_df_stotz_pass$species)){
   tmp$elev_range <- elev_range
   tmp$elev_min <- elev_min
   tmp$elev_max <- elev_max
-  bin_number <- elev_range %/% 100 
+  bin_number <- elev_range %/% 100
   tmp$binID <- cut(tmp$elevation, bin_number)
   vardf[[i]] <- tmp
 }
 blood_df_stotz_pass <- do.call(rbind, vardf)
 ```
 
-We're now going to apply a final set of filters to the data (using the function `outliers_limits()`), removing all species with fewer than 2 unique elevational records at least 200 m apart, and fewer than 2 elevational records in the first and last quantile of their range. (This will create the dataframe we'll use for our analysis of the slope of blood parameters—for variance, we'll begin working with a separate dataframe, as we aren't concered with how much of the range these data span.)
+We're now going to apply a final set of filters to the data (using the function `outliers_limits()`), removing all species with fewer than 2 unique elevational records at least 150 m apart, and fewer than 2 elevational records in the first and last quartile of their range. (This will create the dataframe we'll use for our analysis of the slope of blood parameters—for variance, we'll begin working with a separate dataframe, as we aren't concered with how much of the range these data span.)
 
 ```{r,  message=FALSE, warning=FALSE}
 blood_df_slope <- outliers_limits(blood_df_stotz_pass, min_sample=2, min_limit=2, 200)
@@ -354,10 +449,10 @@ ggplot(blood_df_genus, aes(x=elevation, y=hb)) +
 
 ```
 
-Next, let's calculate the slope of haemoglobin and haematocrit—and the average slope angle for different species—using the `blood_slope()` function I've written.  
+Next, let's calculate the slope of hemoglobin and hematocrit—and the average slope angle for different species—using the `blood_slope()` function I've written.  
 
 ```{r,  message=FALSE, warning=FALSE}
-# calculate elevational range and median
+# calculate elevational range and sampling range
 blood_df_slope$elev_range <- blood_df_slope$elev_max - blood_df_slope$elev_min
 
 # run function
@@ -369,9 +464,11 @@ We'll create a separate dataframe of variance values, using data from the 100m e
 
 ```{r,  message=FALSE, warning=FALSE}
 # run function
-variance_df <- blood_variance(blood_df_stotz_pass)
+variance_df <- blood_variance(blood_df_stotz_pass, 5)
 variance_df <- variance_df[complete.cases(variance_df),] 
 head(variance_df)
+nrow(variance_df)
+length(unique(variance_df$species))
 ```
 
 Next, we'll load the Jetz supertree so we can control for phylogeny, and then subset the tree down to only those species we have slope data for: 
@@ -387,18 +484,28 @@ There are a few taxonomic conflicts, which I'll resolve here:
 ```{r}
 slope_df[grep("Arremon_assimilis", slope_df$species),]$species <- "Arremon_torquatus"
 slope_df[grep("Myiothlypis_coronata", slope_df$species),]$species <- "Basileuterus_coronatus"
+#slope_df[grep("Myiothlypis_luteoviridis", slope_df$species),]$species <- "Basileuterus_luteoviridis"
 slope_df[grep("Orochelidon_murina", slope_df$species),]$species <- "Notiochelidon_murina"
 slope_df[grep("Spinus_magellanicus", slope_df$species),]$species <- "Carduelis_magellanica"
 slope_df[grep("Spinus_uropygialis", slope_df$species),]$species <- "Carduelis_uropygialis"
+# slope_df[grep("Spinus_crassirostris", slope_df$species),]$species <- "Carduelis_crassirostris"
 slope_df[grep("Systellura_longirostris", slope_df$species),]$species <- "Caprimulgus_longirostris"
 slope_df[grep("Aglaiocercus_kingii", slope_df$species),]$species <- "Aglaiocercus_kingi"
 slope_df[grep("Myiothlypis_chrysogaster", slope_df$species),]$species <- "Basileuterus_chrysogaster"
 slope_df[grep("Myiothlypis_nigrocristata", slope_df$species),]$species <- "Basileuterus_nigrocristatus"
 slope_df[grep("Pipraeidea_bonariensis", slope_df$species),]$species <- "Thraupis_bonariensis"
 slope_df[grep("Premnornis_guttuliger", slope_df$species),]$species <- "Premnornis_guttuligera"
+# slope_df[grep("Ceratopipra_chloromeros", slope_df$species),]$species <- "Pipra_chloromeros"
+# slope_df[grep("Chloropipo_unicolor", slope_df$species),]$species <- "Xenopipo_unicolor"
+slope_df[grep("Thamnophilus_bernardi", slope_df$species),]$species <- "Sakesphorus_bernardi"
+# slope_df[grep("Cercomacroides_serva", slope_df$species),]$species <- "Cercomacra_serva"
 
 # prune tree
 slope.tree <- keep.tip(supertree, slope_df$species)
+
+# write to files
+write.csv(slope_df, file="~/Dropbox/andean_range_limits/data/blood_slopes.csv")
+write.tree(slope.tree, file="~/Dropbox/andean_range_limits/data/blood_slope.tre")
 ```
 
 And then the same thing for our variance data: 
@@ -407,189 +514,389 @@ And then the same thing for our variance data:
 variance_df$species <- sub(" ", "_", variance_df$species) 
 variance_df[grep("Myiothlypis_coronata", variance_df$species),]$species <- "Basileuterus_coronatus"
 variance_df[grep("Myiothlypis_luteoviridis", variance_df$species),]$species <- "Basileuterus_luteoviridis"
-variance_df[grep("Orochelidon_murina", variance_df$species),]$species <- "Notiochelidon_murina"
+# variance_df[grep("Myiothlypis_nigrocristata", variance_df$species),]$species <- "Basileuterus_nigrocristatus"
+# variance_df[grep("Orochelidon_murina", variance_df$species),]$species <- "Notiochelidon_murina"
 variance_df[grep("Spinus_magellanicus", variance_df$species),]$species <- "Carduelis_magellanica"
 variance_df[grep("Spinus_uropygialis", variance_df$species),]$species <- "Carduelis_uropygialis"
 variance_df[grep("Aglaiocercus_kingii", variance_df$species),]$species <- "Aglaiocercus_kingi"
 variance_df[grep("Pipraeidea_bonariensis", variance_df$species),]$species <- "Thraupis_bonariensis"
 variance_df[grep("Pheugopedius_eisenmanni", variance_df$species),]$species <- "Thryothorus_eisenmanni"
 variance_df[grep("Thamnophilus_bernardi", variance_df$species),]$species <- "Sakesphorus_bernardi"
+# variance_df[grep("Isleria_hauxwelli", variance_df$species),]$species <- "Myrmotherula_hauxwelli"
+#variance_df[grep("Systellura_longirostris", variance_df$species),]$species <- "Caprimulgus_longirostris"
+
+
+# prune tree
 variance.tree <- keep.tip(supertree, variance_df$species)
+
+# write to files
+write.csv(variance_df, file="~/Dropbox/andean_range_limits/data/blood_variances.csv")
+write.tree(variance.tree, file="~/Dropbox/andean_range_limits/data/blood_variances.tre")
 ```
 
-Now, we'll attempt to fit basic phylogenetic least squares (PGLS) models to our data using Liam Revell's phytools. For now, we're going to ignore possible sex-based confounds, and analyze only the subset of variance estimates we have matching slope estimates for. Specifically, we're going to fit models attemping to predict the rate of change  across elevation in Hb, Hct, and MCHC using a species elevational range breadth, median elevational range, and mass as predictors, while weighting the dependent variable by the standard error of the linear regression that generated it, and controlling for phylogeny. 
+Before moving on to model fitting, let's visualize the distribution of blood parameter slopes and variances—a key descriptive contribution of the study:
+
+```{r}
+# tidy dataframe
+slope_tidy <- slope_df %>% pivot_longer(c(slope_hb, slope_hct, slope_mchc), 
+                                         names_to = "key", values_to = "value")
+```
+```{r, echo=FALSE}
+
+# change facet labels
+slope_tidy$key <- factor(slope_tidy$key)
+levels(slope_tidy$key) <- c("Hb", "Hct", "MCHC")
+
+# estimate medians
+median_hb <- slope_tidy[slope_tidy$key=="Hb",]$value %>% median()
+median_hct <- slope_tidy[slope_tidy$key=="Hct",]$value %>% median()
+median_mchc <- slope_tidy[slope_tidy$key=="MCHC",]$value %>% median()
+
+
+# plot
+ggplot(slope_tidy, aes(x=value)) + 
+  theme_bw() +
+  facet_wrap(~key, scales="free_x") +
+  geom_histogram(bins=50, fill=NA, color="black") +
+  geom_vline(data=filter(slope_tidy, key=="Hb"), aes(xintercept=median_hb), colour="red",
+             linetype="dashed") + 
+  geom_vline(data=filter(slope_tidy, key=="Hct"), aes(xintercept=median_hct), colour="red",
+             linetype="dashed") + 
+    geom_vline(data=filter(slope_tidy, key=="MCHC"), aes(xintercept=median_mchc), colour="red",
+             linetype="dashed") + 
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank()) +
+  xlab("Slope") +
+  ylab("Count")
+
+```
+
+This shows us the median slope value for change in Hb or Hct is greater than 0, but is difficult to tell for MCHC. Let's test this formally: 
+
+```{r}
+# shapiro test to see if t-test is appropriate (e.g. data are normally distributed)
+shapiro.test(slope_df$slope_hb) # W = 0.9478, p-value = 0.0003168
+shapiro.test(slope_df$slope_hct) # W = 0.9031, p-value = 8.109e-07
+shapiro.test(slope_df$slope_mchc) # W = 0.83395, p-value = 1.011e-09
+
+# all fail, so wilcox test better
+wilcox.test(slope_df$slope_hb) # V = 4034, p-value = 0.001736
+wilcox.test(slope_df$slope_hct) # V = 4143, p-value = 0.0005369
+wilcox.test(slope_df$slope_mchc) # V = 3205, p-value = 0.5314
+```
+
+As expected, the slope values for Hb and Hct are significantly greater than 0, but those for MCHC are not. What's going on with variance?
+
+```{r}
+# tidy dataframe
+variance_tidy <- variance_df %>% pivot_longer(c(variance_hb, variance_hct, variance_mchc), 
+                                         names_to = "key", values_to = "value")
+```
+
+```{r, echo=FALSE}
+# change facet labels
+variance_tidy$key <- factor(variance_tidy$key)
+levels(variance_tidy$key) <- c("Hb", "Hct", "MCHC")
+
+# estimate medians
+median_hb <- variance_tidy[variance_tidy$key=="Hb",]$value %>% median()
+median_hct <- variance_tidy[variance_tidy$key=="Hct",]$value %>% median()
+median_mchc <- variance_tidy[variance_tidy$key=="MCHC",]$value %>% median()
+
+# plot
+ggplot(variance_tidy, aes(x=value)) + 
+  theme_bw() +
+  facet_wrap(~key) +
+  geom_histogram(bins=50, fill=NA, color="black") +
+  geom_vline(data=filter(variance_tidy, key=="Hb"), aes(xintercept=median_hb), colour="red",
+             linetype="dashed") + 
+  geom_vline(data=filter(variance_tidy, key=="Hct"), aes(xintercept=median_hct), colour="red",
+             linetype="dashed") + 
+    geom_vline(data=filter(variance_tidy, key=="MCHC"), aes(xintercept=median_mchc), colour="red",
+             linetype="dashed") + 
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank()) +
+  xlab("Variance") +
+  ylab("Count")
+```
+
+Looks like the variance of the coefficient of variation (lol) is normalish, with one fat tail, and left-skewed.
+
+And let's also make scatter plots of everything I find interesting:  
+
+```{r, echo=FALSE, fig.height=9,fig.width=7}
+a <- ggplot(slope_tidy, aes(x=elev_range, y=value)) +
+  theme_bw() +
+  facet_wrap(~key, scales = "free_y") +
+  geom_point(pch=21) +
+  geom_hline(yintercept = 0, color="red", linetype="dashed") +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank()) +
+  ylab("Slope") +
+  xlab("Elevational Range Breadth")
+
+b <- ggplot(slope_tidy, aes(x=median_elevation, y=value)) +
+  theme_bw() +
+  facet_wrap(~key, scales = "free_y") +
+  geom_point(pch=21) +
+  geom_hline(yintercept = 0, color="red", linetype="dashed") +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank()) +
+  ylab("Slope") +
+  xlab("Median Range Elevation")
+
+c <- ggplot(variance_tidy, aes(x=edge_distance, y=value)) +
+  theme_bw() +
+  facet_wrap(~key, scales = "free_y") +
+  geom_point(pch=21) +
+ # geom_hline(yintercept = 0, color="red", linetype="dashed") +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank()) +
+    ylab("Variance") +
+  xlab("Edge Distance")
+
+d <- ggplot(variance_tidy, aes(x=bin_elevation, y=value)) +
+  theme_bw() +
+  facet_wrap(~key, scales = "free_y") +
+  geom_point(pch=21) +
+  # geom_hline(yintercept = 0, color="red", linetype="dashed") +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank()) +
+    ylab("Variance") +
+  xlab("Bin Elevation")
+
+plot_grid(a, b, c, d, labels="AUTO", nrow=4)
+
+```
+
+Interesting, some vague hints of patterns—but what does it mean? 
+
+To tackle that' we're going to build generative Bayesian models using Stan implemented in the R package brms. Specifically, we're going to test the following (generalized) hypotheses:
+
+#### Slope  
+
+$H_{0}$: The slope of change in blood parameter values is unrelated to predictors (elevational range breadth, median range elevation, sampling range, mass) and best explained by phylogeny alone
+
+$H_{1}$: The slope of change in blood parameter values is best explained by all predictors and phylogeny 
+
+$H2$: The slope of change in blood parameter values is best explained by a subset of predictors and phylogeny  
+
+#### Variance
+
+$H_{0}$: Variance in a given 100 m elevation bin is unrelated to predictors (distance from range edge, relative position in range, median bin elevation) and best explained by phylogeny alone
+
+$H_{1}$: Variance in a given 100 m elevation bin is best explained by phylogeny alone
+
+$H_{2}$: Variance in a given 100 m elevation bin is explained by a subset of predictors and phylogeny  
+
+For each of these hypotheses and each blood trait, we built a corresponding model in `brms()`. For example, the full set of models predicting the rate of change in total blood hemoglobin concentration per unit elevation is as follows:
+
+```{r, eval=FALSE}
+### slope models, hemoglobin
+
+# full model
+slope_full_hb <- brm(
+  formula = bf(slope_hb  ~ 1 + elev_range + sampling_range  + mass + median_elevation +
+                 (1 | gr(phylo, cov=A))),
+  data = slope_df, 
+  family = student(), 
+  data2 = list(A = A),
+  iter = 10000,
+  control = list(adapt_delta = 0.99, max_treedepth = 15),
+  prior = c(
+    prior(normal(0, 10), "b", coef="elev_range"),
+    prior(normal(0, 10), "b", coef="sampling_range"),
+    prior(normal(0, 10), "b", coef="mass"),
+    prior(normal(0, 10), "b", coef="median_elevation"),
+    prior(normal(0, 10), "Intercept"),
+    prior(student_t(3, 0, 2), "sd"),
+    prior(student_t(3, 0, 2), "sigma")
+  )
+)
+
+# simple model
+slope_hb <- brm(
+  formula = bf(slope_hb  ~ 1 + elev_range + median_elevation + (1 | gr(phylo, cov=A))),
+  data = slope_df, 
+  family = student(), 
+  data2 = list(A = A),
+  iter = 10000,
+  control = list(adapt_delta = 0.99, max_treedepth = 15),
+  prior = c(
+    prior(normal(0, 10), "b", coef="elev_range"),
+    prior(normal(0, 10), "b", coef="median_elevation"),
+    prior(normal(0, 10), "Intercept"),
+    prior(student_t(3, 0, 2), "sd"),
+    prior(student_t(3, 0, 2), "sigma")
+  )
+)
+
+# null model, phylogeny only 
+slope_null_hb <- brm(
+  slope_hb  ~ 0 + (1 | gr(phylo, cov=A)),
+  data = slope_df, 
+  family = student(), 
+  data2 = list(A = A),
+  iter = 10000,
+  control = list(adapt_delta = 0.99, max_treedepth = 15),
+  prior = c(
+    prior(student_t(3, 0, 2), "sd"),
+    prior(student_t(3, 0, 2), "sigma")
+  )
+)
+```
+
+Here, we model the response variable (slope) using a Student's-t distribution, to account for heavy tails (more outliers than expected under strict neutrality). We also invoke regularizing priors, to keep the model from getting TOO excited by our data, though undocumented experimentation suggests this isn't really necessary. Importantly, the second model includes *only those predictors with a 95% percent credible interval for* $\beta$ *that doesn't overlap 0.* If no predictors met this criterion, we compared the full model ($H_{1}$) with the corresponding null model ($H_{0}$) alone. We evaluated convergence by examining traceplots, checking ESS values, and making sure $\hat{R}$ values were equal to 1.00. We evaluated model fit using posterior predictive checks for the overall distribution, and the `loo()` function, making sure there weren't many worrisome Pareto-K values for the best-fitting model based on LOOIC.
+
+The full set of models in a separate script (`02_models.R`); I'll present the results here. Of note, we also used a Student's-t distribution to model variance as a response variable, despite indications from posterior predictive checks that a skew-Gaussian distribution might be more appropriate. However, a skew-Gaussian distribution suffered from divergent transitions and high Pareto-K values, and both distributions recovered nearly identical estimates of $\beta$, means, and standard deviations, so we stuck with the former. 
+
+First, let's use LOOIC (actually expected log predictive density, or ELPD, but they are just transofrmations of each other) to compare evidence for our hypotheses for predictors of blood slope:
 
 ```{r, message=FALSE, warning=FALSE}
-# scale variables to be same order of magnitude
-slope_df$mass <- slope_df$mass/1000
-slope_df$elev_range <- slope_df$elev_range/1000000
-slope_df$median_elevation <- slope_df$median_elevation/1000000
-slope_df$slope_hct <- slope_df$slope_hct*10
-
-# assign rownames
-species1 <- as.vector(as.character(slope_df$species))
-rownames(slope_df) <- species1
-
-# get SE of hb measurements
-SE1 <-setNames(slope_df$error_hb, slope.tree$tip.label)
-
-# fit model, hb
-fit_hb <- pgls.SEy(slope_hb ~ elev_range + median_elevation + mass, 
-                   data=slope_df, se=SE1, tree=slope.tree, method="ML")
-fit_hb.tidy <- broom.mixed:::tidy.gls(fit_hb)
-fit_hb.tidy
-
-# get SE of hct measurements
-SE2 <-setNames(slope_df$error_hct, slope.tree$tip.label)
-
-# fit model, hct
-fit_hct <- pgls.SEy(slope_hct ~ elev_range + median_elevation + mass, 
-                    data=slope_df, se=SE2, tree=slope.tree, method="ML")
-fit_hct.tidy <- broom.mixed:::tidy.gls(fit_hct)
-fit_hct.tidy
-
-# get SE of mchc measurements
-SE3 <-setNames(slope_df$error_mchc, slope.tree$tip.label)
-
-# fit model, mchc
-fit_mchc <- pgls.SEy(slope_mchc ~ elev_range + median_elevation + mass, 
-                     data=slope_df, se=SE3, tree=slope.tree, method="ML")
-fit_mchc.tidy <- broom.mixed:::tidy.gls(fit_mchc)
-fit_mchc.tidy
+loo_slope_hb  <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_hb_loo_elpd.csv")
+print(loo_slope_hb)
+loo_slope_hct  <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_hct_loo_elpd.csv")
+print(loo_slope_hct)
+loo_slope_MCHC  <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_hct_loo_elpd.csv")
+print(loo_slope_MCHC)
 ```
 
-I printed out tables of coefficients there, but since that's a lot to take in, let's visualize these results:
+These data indicate that the reduced model ($H_{2}$) is a significantly better fit for our data ($elpd_{diff}>2*se_{diff}$) than the both the null model and the full model, but for both hematocrit and MCHC, the null model is a better fit than the full model (though the error is large enough that they aren't distinguishable).
 
-```{r, echo=FALSE, message=FALSE, error=FALSE, fig.height=6, fig.width=4}
-p1 <- ggplot(fit_hb.tidy, aes(x=estimate, y=term, color=term)) + 
-  theme_bw() +
-  geom_errorbar(aes(xmin=estimate-std.error, xmax=estimate+std.error), width=.1) +
-  geom_line() +
-  geom_vline(xintercept = 0, linetype="dashed") +
-  geom_point(pch=1,size=3) +
-  geom_text(data=subset(fit_hb.tidy, fit_hb.tidy$term=="elev_range"), y = -0.75, label = "*") +
-  xlab(expression(Beta)) +
-  ylab(element_blank()) + 
-  scale_y_discrete(breaks=c("(Intercept)","elev_range","median_elevation","mass"),
-                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Mass")) +
-  scale_color_manual(values=c("black","black","black","red")) +
-  theme(legend.position = "none") +
-  ggtitle("Hemoglobin")
-
-p2 <- ggplot(fit_hct.tidy, aes(x=estimate, y=term, color=term)) + 
-  theme_bw() +
-  geom_errorbar(aes(xmin=estimate-std.error, xmax=estimate+std.error), width=.1) +
-  geom_line() +
-  geom_vline(xintercept = 0, linetype="dashed") +
-  geom_point(pch=1,size=3) +
-  geom_text(data=subset(fit_hb.tidy, fit_hb.tidy$term=="elev_range"), y = -0.75, label = "*") +
-  xlab(expression(Beta)) +
-  ylab(element_blank()) + 
-  scale_y_discrete(breaks=c("(Intercept)","elev_range","median_elevation","mass"),
-                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Mass")) +
-  scale_color_manual(values=c("black","red","black","black")) +
-  theme(legend.position = "none") +
-  ggtitle("Hematocrit")
-
-p3 <- ggplot(fit_mchc.tidy, aes(x=estimate, y=term, color=term)) + 
-  theme_bw() +
-  geom_errorbar(aes(xmin=estimate-std.error, xmax=estimate+std.error), width=.1) +
-  geom_line() +
-  geom_vline(xintercept = 0, linetype="dashed") +
-  geom_point(pch=1,size=3) +
-  geom_text(data=subset(fit_hb.tidy, fit_hb.tidy$term=="elev_range"), y = -0.75, label = "*") +
-  xlab(expression(Beta)) +
-  ylab(element_blank()) + 
-  scale_y_discrete(breaks=c("(Intercept)","elev_range","median_elevation","mass"),
-                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Mass")) +
-  scale_color_manual(values=c("black","red","black","red")) +
-  theme(legend.position = "none") +
-  ggtitle("MCHC")
-
-plot_grid(p1,p2,p3,nrow=3)
-```
-
-TL;DR: Median range elevation is a significant positive predictor of the slope of Hb and MCHC; elevational range breadth is a significant negative predictor of Hct and significant positive predictor of MCHC.  
-
-Next, let's run models attempting to describe variance in these blood parameters. This time, we're going to use the number of unique elevations we have data for as our weighting criterion: 
+Next, variance:
 
 ```{r, message=FALSE, warning=FALSE}
-# assign rownames
-species2 <- as.vector(as.character(variance_df$species))
-rownames(variance_df) <- species2
-
-# get variances in correct order of magnitude; Hct fine
-variance_df$variance_hb <- variance_df$variance_hb/1000
-variance_df$variance_mchc <- variance_df$variance_mchc/1000
-variance_df$mass <- variance_df$mass/1000
-variance_df$elev_range <- variance_df$elev_range/1000000
-variance_df$median_elevation <- variance_df$median_elevation/1000000
-variance_df$range_position <- variance_df$range_position/100
-variance_df$edge_distance <- variance_df$edge_distance/100
-
-# get SE of hb measurements
-SE_elev <-setNames(variance_df$unique_elevations, variance.tree$tip.label)
-
-# fit model, hb
-fit_vhb <- pgls.SEy(variance_hb ~ elev_range + median_elevation + range_position + edge_distance + mass, data=variance_df, se=SE_elev, tree=variance.tree)
-fit_vhb.tidy <- broom.mixed:::tidy.gls(fit_vhb)
-fit_vhb.tidy
-
-# fit model, hct
-fit_vhct <- pgls.SEy(variance_hct ~ elev_range + median_elevation + range_position + edge_distance + mass, data=variance_df, se=SE_elev, tree=variance.tree)
-fit_vhct.tidy <- broom.mixed:::tidy.gls(fit_vhct)
-fit_vhct.tidy
-
-# fit model, hct
-fit_vmchc <- pgls.SEy(variance_mchc ~ elev_range + median_elevation + range_position + edge_distance + mass, data=variance_df, se=SE_elev, tree=variance.tree)
-fit_vmchc.tidy <- broom.mixed:::tidy.gls(fit_vmchc)
-fit_vmchc.tidy
+loo_variance_hb  <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hb_loo_elpd.csv")
+print(loo_variance_hb)
+loo_variance_hct  <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hct_loo_elpd.csv")
+print(loo_variance_hct)
+loo_variance_MCHC  <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hct_loo_elpd.csv")
+print(loo_variance_MCHC)
 ```
 
-```{r, echo=FALSE, message=FALSE, error=FALSE, fig.height=8, fig.width=4}
-g1 <- ggplot(fit_vhb.tidy, aes(x=estimate, y=term, color=term)) + 
+Here, we learn that for all traits, the full model ($H1$) is a significantly better fit than the null model ($H0$). 
+
+Now, let's visualize effect sizes, using our full models in all instances. We'll color code predictors by whether their 95% and 89% credible intervals overlap with 0. 
+
+```{r,message=FALSE}
+# read data
+slope_full_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_hb.csv")
+slope_full_hb_draws <- credibility_coder(slope_full_hb_draws)
+slope_full_hct_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_hct.csv")
+slope_full_hct_draws <- credibility_coder(slope_full_hct_draws)
+slope_full_mchc_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_mchc.csv")
+slope_full_mchc_draws <- credibility_coder(slope_full_mchc_draws)
+```
+```{r, echo=FALSE}
+library(tidybayes)
+
+ggplot(data=slope_full_hb_draws, aes(y = .variable, x = .value)) +
+  stat_halfeye(aes(fill=credible)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("gray80","darkred","darksalmon"),
+                    name="Credible Interval",
+                       breaks=c(0, 1, 2),
+                       labels=c("NA", "95%", "89%")) +  
   theme_bw() +
-  geom_errorbar(aes(xmin=estimate-std.error, xmax=estimate+std.error), width=.1) +
-  geom_line() +
   geom_vline(xintercept = 0, linetype="dashed") +
-  geom_point(pch=1,size=3) +
   xlab(expression(Beta)) +
   ylab(element_blank()) + 
-  scale_y_discrete(breaks=c("(Intercept)","elev_range","median_elevation","range_position","edge_distance","mass"),
-                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Rel. Range Position", "Dist.from Edge", "Mass")) +
-  scale_color_manual(values=c("black","black","red","black","red","black")) +
-  theme(legend.position = "none") +
+  scale_y_discrete(breaks=c("b_Intercept","b_elev_range","b_median_elevation","b_sampling_range","b_mass"),
+                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Sampling Range","Mass")) +
   ggtitle("Hemoglobin")
 
-g2 <- ggplot(fit_vhct.tidy, aes(x=estimate, y=term, color=term)) + 
+
+ggplot(data=slope_full_hct_draws, aes(y = .variable, x = .value)) +
+  stat_halfeye(aes(fill=credible)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("gray80","darkred","darksalmon"),
+                    name="Credible Interval",
+                       breaks=c(0, 1, 2),
+                       labels=c("NA", "95%", "89%")) +
   theme_bw() +
-  geom_errorbar(aes(xmin=estimate-std.error, xmax=estimate+std.error), width=.1) +
-  geom_line() +
   geom_vline(xintercept = 0, linetype="dashed") +
-  geom_point(pch=1,size=3) +
   xlab(expression(Beta)) +
   ylab(element_blank()) + 
-  scale_y_discrete(breaks=c("(Intercept)","elev_range","median_elevation","range_position","edge_distance","mass"),
-                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Rel. Range Position", "Dist.from Edge", "Mass")) +
-  scale_color_manual(values=c("red","black","black","red","red","black")) +
-  theme(legend.position = "none") +
+  scale_y_discrete(breaks=c("b_Intercept","b_elev_range","b_median_elevation","b_sampling_range","b_mass"),
+                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Sampling Range","Mass")) +
   ggtitle("Hematocrit")
 
-g3 <- ggplot(fit_vmchc.tidy, aes(x=estimate, y=term, color=term)) + 
-  theme_bw() +
-  geom_errorbar(aes(xmin=estimate-std.error, xmax=estimate+std.error), width=.1) +
-  geom_line() +
+
+ggplot(data=slope_full_mchc_draws, aes(y = .variable, x = .value)) +
+  stat_halfeye(aes(fill=credible)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("gray80","darkred","darksalmon"),
+                    name="Credible Interval",
+                       breaks=c(0, 1, 2),
+                       labels=c("NA", "95%", "89%")) +  theme_bw() +
   geom_vline(xintercept = 0, linetype="dashed") +
-  geom_point(pch=1,size=3) +
   xlab(expression(Beta)) +
   ylab(element_blank()) + 
-  scale_y_discrete(breaks=c("(Intercept)","elev_range","median_elevation","range_position","edge_distance","mass"),
-                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Rel. Range Position", "Dist.from Edge", "Mass")) +
-  scale_color_manual(values=c("black","black","black","black","black","black")) +
-  theme(legend.position = "none") +
+  scale_y_discrete(breaks=c("b_Intercept","b_elev_range","b_median_elevation","b_sampling_range","b_mass"),
+                   labels=c("Intercept","Elev. Range Breadth","Med. Range Elev.", "Sampling Range","Mass")) +
   ggtitle("MCHC")
 
-plot_grid(g1,g2,g3,nrow=3)
 ```
 
-Median range elevation is a significant negative predictor of variance in Hb and Hct; Elevational range breadth is a significant positive predictor of variance in Hb; mass is a significant negative predictor of variance in Hct. There are no good predictors of MCHC. 
+So at the 95% CI level we see a positive effect of median range elevation and elevational range breadth on hemoglobin slope, but not the other parameters. At the 89% CI level, we see a positive effect of median range elevation on hematocrit slope, and a positive effect of elevational range breadth on MCHC slope.
+
+Now, our variance models:
+
+```{r, message=FALSE}
+# read data
+variance_full_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hb.csv")
+variance_full_hb_draws <- credibility_coder(variance_full_hb_draws)
+variance_full_hct_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hct.csv")
+variance_full_hct_draws <- credibility_coder(variance_full_hct_draws)
+variance_full_mchc_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_mchc.csv")
+variance_full_mchc_draws <- credibility_coder(variance_full_mchc_draws)
+```
+```{r, echo=FALSE}
+ggplot(data=variance_full_hb_draws, aes(y = .variable, x = .value, fill = .variable)) +
+  stat_halfeye(aes(fill=credible)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("gray80","darkred","darksalmon"),
+                    name="Credible Interval",
+                       breaks=c(0, 1, 2),
+                       labels=c("NA", "95%", "89%")) +  theme_bw() +
+  geom_vline(xintercept = 0, linetype="dashed") +
+  xlab(expression(Beta)) +
+  ylab(element_blank()) + 
+  scale_y_discrete(breaks=c("b_Intercept","b_range_position","b_edge_distance", "b_bin_elevation"),
+                   labels=c("Intercept","Rel. Range Position","Dist. From Edge.", "Bin Elevation")) +
+  ggtitle("Hemoglobin")
+
+ggplot(data=variance_full_hct_draws, aes(y = .variable, x = .value, fill = .variable)) +
+  stat_halfeye(aes(fill=credible)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("gray80","darkred","darksalmon"),
+                    name="Credible Interval",
+                       breaks=c(0, 1, 2),
+                       labels=c("NA", "95%", "89%")) +  theme_bw() +
+  geom_vline(xintercept = 0, linetype="dashed") +
+  xlab(expression(Beta)) +
+  ylab(element_blank()) + 
+  scale_y_discrete(breaks=c("b_Intercept","b_range_position","b_edge_distance", "b_bin_elevation"),
+                   labels=c("Intercept","Rel. Range Position","Dist. From Edge.", "Bin Elevation")) + 
+  ggtitle("Hematocrit")
+
+
+ggplot(data=variance_full_mchc_draws, aes(y = .variable, x = .value, fill = .variable)) +
+  stat_halfeye(aes(fill=credible)) +
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  scale_fill_manual(values = c("gray80","darkred","darksalmon"),
+                    name="Credible Interval",
+                       breaks=c(0, 1, 2),
+                       labels=c("NA", "95%", "89%")) +  theme_bw() +
+  geom_vline(xintercept = 0, linetype="dashed") +
+  xlab(expression(Beta)) +
+  ylab(element_blank()) + 
+  scale_y_discrete(breaks=c("b_Intercept","b_range_position","b_edge_distance", "b_bin_elevation"),
+                   labels=c("Intercept","Rel. Range Position","Dist. From Edge.", "Bin Elevation")) +
+  ggtitle("MCHC")
+
+```
+
+We see that elevation and edge distance have positive effects on the coefficient of variance of hemoglobin at the 95% CI level; that elevation and edge distance and relative range position have positive effects on the coefficient of variance of hematocrit at the 95% CI level; and that edge distance has a positive effect on the coefficient of variance of MCHC at the 89% CI level. 
+
+Fin!

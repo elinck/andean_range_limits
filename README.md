@@ -20,6 +20,5 @@ in `scripts/` subdirectory:
 
 `01_blood_data_exploration.md`: markdown document from prelim analyses  
 
-`02_slope_analysis.R`: slope angle across andes script  
-
+`02_models.R`: script for `brms` model fitting and output export
 

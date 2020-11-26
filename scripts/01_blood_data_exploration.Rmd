@@ -2,7 +2,6 @@
 title: "Andean bird blood data analysis"
 output: 
   pdf_document:
-  github_document:
   latex_engine: xelatex
 ---
 

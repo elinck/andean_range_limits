@@ -1,10 +1,16 @@
-# Andean range limits  
+# Blood plasticity & variance in Andean birds
 
 scripts for evolution of elevational range limit project   
 
 in `figures/` subdirectory:   
 
 `multispecies_hb.pdf`: hemoglobin across elevation for species passing filters  
+
+`multispecies_hct.pdf`: hematocrit across elevation for species passing filters  
+
+`multispecies_mchc.pdf`: mean cellular hemoglobin concentration across elevation for species passing filters  
+
+`figure_*.pdf`: figures 1-4 associated with Linck et al. *in prep*  
 
 `multispecies_hct.pdf`: hematocrit across elevation for species passing filters  
 

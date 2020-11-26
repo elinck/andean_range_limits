@@ -13,7 +13,6 @@ cv <- function(data){
   return(coef)
 }
   
-
 # calculate slope and variance of blood parameters; species' range mean attributes
 blood_slope <- function(input_object){
   
@@ -24,7 +23,9 @@ blood_slope <- function(input_object){
     species <- unique(tmp$species)
     med_elev <- unique(tmp$elev_min) + unique(tmp$elev_range)/2
     elev_range <- unique(tmp$elev_range)
-    sampling_range  <- max(tmp$elevation) - min(tmp$elevation) 
+    sampling_range  <- (max(tmp$elevation) - min(tmp$elevation))/elev_range 
+    elev_min <- unique(tmp$elev_min)
+    elev_max <- unique(tmp$elev_max)
     mass <- mean(tmp$mass, na.rm = TRUE)
     n <- nrow(tmp) # get sample size
     n.elev <- length(unique(tmp$elevation)) # get number of unique elevation localities
@@ -45,7 +46,7 @@ blood_slope <- function(input_object){
     se.mchc <- mod.mchc.sum$coefficients[2,2] # get hct SE
     species_list[[i]] <- cbind.data.frame(species,n,n.elev,slope.hb,r2.hb,se.hb,
                                           slope.hct,r2.hct,se.hct,slope.mchc,r2.mchc,se.mchc,
-                                          elev_range,sampling_range,med_elev,mass)
+                                          elev_range,sampling_range,elev_min,elev_max,med_elev,mass)
   }
   
   # assemble dataframe
@@ -53,7 +54,7 @@ blood_slope <- function(input_object){
   rownames(data.blood.df) <- NULL
   colnames(data.blood.df) <- c("species","sample_size","unique_elevations","slope_hb","r2_hb","error_hb",
                                "slope_hct","r2_hct","error_hct","slope_mchc","r2_mchc","error_mchc",
-                               "elev_range","sampling_range","median_elevation","mass")
+                               "elev_range","sampling_range","elev_min","elev_max","median_elevation","mass")
   return(data.blood.df)
 
 }
@@ -202,6 +203,10 @@ credibility_coder <- function(dataframe){
   # make factor
   dataframe$credible <- as.factor(dataframe$credible)
   
+  # make tibble
+  dataframe <- dataframe %>% as_tibble()
+  
   # output
   return(dataframe)
 }
+

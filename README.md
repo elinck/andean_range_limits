@@ -1,4 +1,4 @@
-# Blood plasticity & variance in Andean birds
+# Blood phenotype plasticity & variance in Andean birds
 
 scripts for evolution of elevational range limit project   
 

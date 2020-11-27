@@ -1248,6 +1248,9 @@ blood_df <- read.csv("~/Dropbox/andean_range_limits/data/filtered_hb_dataset.csv
 select <- c("Oreotrochilus", "Diglossa","Turdus","Spinus")
 blood_df_sub <- filter(blood_df, genus %in% select)
 blood_df_sub <- blood_df_sub[!blood_df_sub$species=="Diglossa mystacalis",]
+blood_df_sub <- blood_df_sub[!blood_df_sub$species=="Spinus crassirostris",]
+blood_df_sub <- blood_df_sub[!blood_df_sub$species=="Turdus albicollis",]
+blood_df_sub <- blood_df_sub[!blood_df_sub$species=="Turdus serranus",]
 blood_df_sub$facet <- factor(blood_df_sub$species, 
                              levels=c("Diglossa cyanea",
                                       "Diglossa brunneiventris",

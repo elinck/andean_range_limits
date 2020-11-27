@@ -1139,13 +1139,18 @@ Now, the interaction of these variables:
 # load interaction data
 variance_hb_interaction <- read_csv("~/Dropbox/andean_range_limits/data/variance_hb_interaction.csv")
 
+# subset to only 3 values of bin_elevation
+variance_hb_interaction <- variance_hb_interaction %>% filter(bin_elevation_s==(-2) | 
+                                                                bin_elevation_s==0 |
+                                                                bin_elevation_s==2)
+
 # turn panels into factors
 variance_hb_interaction$panel <- as.factor(variance_hb_interaction$panel)
 
 # rename panels
-variance_hb_interaction$panel <- plyr::revalue(variance_hb_interaction$panel, c("panel_-1"="Bin Elev. = -1", 
+variance_hb_interaction$panel <- plyr::revalue(variance_hb_interaction$panel, c("panel_-2"="Bin Elev. = -2", 
                                 "panel_0"="Bin. Elev = 0",
-                                "panel_1"="Bin. Elev = +1"))
+                                "panel_2"="Bin. Elev = +2"))
 ```
 
 ![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-59-1.png)<!-- -->

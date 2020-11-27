@@ -383,15 +383,15 @@ fitted(slope_hb_3, newdata=median_seq) %>%
 
 # export counterfactual prediction for interaction term
 tmp = list()
-for(i in -1:1){
-  interaction_seq <- tibble(elev_range_s = c(i,i,i),
+for(i in -3:3){
+  interaction_seq <- tibble(elev_range_s = c(i,i,i,i,i,i,i),
                             error_hb = mean(slope_df$error_hb),
-                            median_elevation_s = seq(from = -1, to = 1, by = 1),
+                            median_elevation_s = seq(from = -3, to = 3, by = 1),
                             mass_s = mean(slope_df$mass_s),
                             sampling_range_s = mean(slope_df$sampling_range_s))
   
   # amake predictions, assign to dataframe
-  tmp[[i+2]] <- fitted(slope_hb_2, newdata=interaction_seq) %>%
+  tmp[[i+4]] <- fitted(slope_hb_2, newdata=interaction_seq) %>%
     as_tibble() %>%
     rename(f_ll=Q2.5,
            f_ul=Q97.5) %>%
@@ -404,7 +404,7 @@ for(i in -1:1){
       interaction_seq)
   
   # name panel for faceting
-  tmp[[i+2]]$panel <- paste0("panel_",i)
+  tmp[[i+4]]$panel <- paste0("panel_",i)
 }
 
 # assemble and export
@@ -837,12 +837,12 @@ fitted(variance_hb_2, newdata=edge_seq) %>%
 
 # export counterfactual prediction for interaction term
 tmp = list()
-for(i in -1:1){
-  interaction_seq <- tibble(bin_elevation_s = c(i,i,i),
-                            edge_distance_s = seq(from = -1, to = 1, by = 1))
+for(i in -3:3){
+  interaction_seq <- tibble(bin_elevation_s = c(i,i,i,i,i,i,i),
+                            edge_distance_s = seq(from = -3, to = 3, by = 1))
   
   # amake predictions, assign to dataframe
-  tmp[[i+2]] <- fitted(variance_hb_2, newdata=interaction_seq) %>%
+  tmp[[i+4]] <- fitted(variance_hb_2, newdata=interaction_seq) %>%
     as_tibble() %>%
     rename(f_ll=Q2.5,
            f_ul=Q97.5) %>%
@@ -855,7 +855,7 @@ for(i in -1:1){
       interaction_seq)
   
   # name panel for faceting
-  tmp[[i+2]]$panel <- paste0("panel_",i)
+  tmp[[i+4]]$panel <- paste0("panel_",i)
 }
 
 # assemble and export
@@ -1016,12 +1016,12 @@ fitted(variance_hct_2, newdata=edge_seq) %>%
 
 # export counterfactual prediction for interaction term
 tmp = list()
-for(i in -1:1){
-  interaction_seq <- tibble(bin_elevation_s = c(i,i,i),
-                            edge_distance_s = seq(from = -1, to = 1, by = 1))
+for(i in -3:3){
+  interaction_seq <- tibble(bin_elevation_s = c(i,i,i,i,i,i,i),
+                            edge_distance_s = seq(from = -3, to = 3, by = 1))
   
-  # amake predictions, assign to dataframe
-  tmp[[i+2]] <- fitted(variance_hct_2, newdata=interaction_seq) %>%
+  # make predictions, assign to dataframe
+  tmp[[i+4]] <- fitted(variance_hct_2, newdata=interaction_seq) %>%
     as_tibble() %>%
     rename(f_ll=Q2.5,
            f_ul=Q97.5) %>%
@@ -1034,7 +1034,7 @@ for(i in -1:1){
       interaction_seq)
   
   # name panel for faceting
-  tmp[[i+2]]$panel <- paste0("panel_",i)
+  tmp[[i+4]]$panel <- paste0("panel_",i)
 }
 
 # assemble and export

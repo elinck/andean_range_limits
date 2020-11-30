@@ -953,6 +953,104 @@ slope_mchc_loo
 For the slope of change in MCHC, the null model is again best, and the
 SEs are again large.
 
+``` r
+variance_hb_loo <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hb_loo_elpd.csv")
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   X1 = col_character(),
+    ##   elpd_diff = col_double(),
+    ##   se_diff = col_double(),
+    ##   elpd_loo = col_double(),
+    ##   se_elpd_loo = col_double(),
+    ##   p_loo = col_double(),
+    ##   se_p_loo = col_double(),
+    ##   looic = col_double(),
+    ##   se_looic = col_double()
+    ## )
+
+``` r
+variance_hb_loo 
+```
+
+    ## # A tibble: 4 x 9
+    ##   X1        elpd_diff se_diff elpd_loo se_elpd_loo p_loo se_p_loo looic se_looic
+    ##   <chr>         <dbl>   <dbl>    <dbl>       <dbl> <dbl>    <dbl> <dbl>    <dbl>
+    ## 1 variance…     0       0        -17.7        8.34  4.20    0.528  35.5     16.7
+    ## 2 variance…    -0.534   0.774    -18.3        8.40  7.95    0.964  36.5     16.8
+    ## 3 variance…    -0.630   1.34     -18.4        8.57  3.56    0.471  36.7     17.1
+    ## 4 variance…    -3.30    3.04     -21.0        7.92 13.5     1.69   42.1     15.8
+
+For variance within a given elevational band in hemoglobin, the model
+with an interaction term but without predictors is best, with large SEs.
+
+``` r
+variance_hct_loo <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hct_loo_elpd.csv")
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   X1 = col_character(),
+    ##   elpd_diff = col_double(),
+    ##   se_diff = col_double(),
+    ##   elpd_loo = col_double(),
+    ##   se_elpd_loo = col_double(),
+    ##   p_loo = col_double(),
+    ##   se_p_loo = col_double(),
+    ##   looic = col_double(),
+    ##   se_looic = col_double()
+    ## )
+
+``` r
+variance_hct_loo 
+```
+
+    ## # A tibble: 4 x 9
+    ##   X1        elpd_diff se_diff elpd_loo se_elpd_loo p_loo se_p_loo looic se_looic
+    ##   <chr>         <dbl>   <dbl>    <dbl>       <dbl> <dbl>    <dbl> <dbl>    <dbl>
+    ## 1 variance…     0       0        -20.4        8.87  3.61    0.547  40.8     17.7
+    ## 2 variance…    -0.290   0.894    -20.7        8.81  4.25    0.581  41.4     17.6
+    ## 3 variance…    -1.32    1.02     -21.7        8.91  7.04    0.981  43.5     17.8
+    ## 4 variance…    -6.43    3.34     -26.9        8.81 14.9     2.19   53.7     17.6
+
+For variance within a given elevational band in hematocrit, the model
+without and interaction term and without predictors is best, and we can
+be fairly confident in the improvement over the null.
+
+``` r
+variance_mchc_loo <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_mchc_loo_elpd.csv")
+```
+
+    ## Parsed with column specification:
+    ## cols(
+    ##   X1 = col_character(),
+    ##   elpd_diff = col_double(),
+    ##   se_diff = col_double(),
+    ##   elpd_loo = col_double(),
+    ##   se_elpd_loo = col_double(),
+    ##   p_loo = col_double(),
+    ##   se_p_loo = col_double(),
+    ##   looic = col_double(),
+    ##   se_looic = col_double()
+    ## )
+
+``` r
+variance_mchc_loo 
+```
+
+    ## # A tibble: 4 x 9
+    ##   X1        elpd_diff se_diff elpd_loo se_elpd_loo p_loo se_p_loo looic se_looic
+    ##   <chr>         <dbl>   <dbl>    <dbl>       <dbl> <dbl>    <dbl> <dbl>    <dbl>
+    ## 1 variance…     0       0         14.9        7.35  3.60    0.505 -29.8     14.7
+    ## 2 variance…    -0.577   0.579     14.3        7.33  4.23    0.599 -28.7     14.7
+    ## 3 variance…    -1.54    0.640     13.4        7.31  7.46    0.924 -26.7     14.6
+    ## 4 variance…    -3.73    3.17      11.2        7.50 25.1     2.72  -22.4     15.0
+
+For variance within a given elevational band in MCHC, the model without
+and interaction term and without predictors is best, but the SE
+associated with that difference is large.
+
 Next, let’s visualize effect sizes for the best-fit models. We’ll start
 with the slope model for hemoglobin:
 
@@ -979,7 +1077,7 @@ slope_hb_draws <- slope_hb_draws %>%
 slope_hb_draws <- merge(slope_hb_draws, credibility, by.x = ".variable", by.y = ".variable")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-42-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-45-1.png)<!-- -->
 
 We see a positive effect of elevational range breadth on slope of change
 in hemoglobin concentration, credible at the 89% level, but no other
@@ -1006,7 +1104,7 @@ slope_hct_draws <- slope_hct_draws %>%
 slope_hct_draws <- merge(slope_hct_draws, credibility, by.x = ".variable", by.y = ".variable")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-44-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-47-1.png)<!-- -->
 We find no credible effects for slope of change in hematocrit.
 
 ``` r
@@ -1028,7 +1126,7 @@ slope_mchc_draws <- slope_mchc_draws %>%
 slope_mchc_draws <- merge(slope_mchc_draws, credibility, by.x = ".variable", by.y = ".variable")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-46-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-49-1.png)<!-- -->
 …and no credible effects for the slope of change in MCHC.
 
 So to summarize, we see that **elevational range breadth** and **median
@@ -1042,7 +1140,7 @@ elevational range breadth or median range elevation to slope of change
 in hemoglobin when all other variables but the predictor of interest are
 held constant:
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-48-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-51-1.png)<!-- -->
 
 A positive, linear effect; lots of uncertainty.
 
@@ -1068,7 +1166,7 @@ variance_hb_draws <- variance_hb_draws %>%
 variance_hb_draws <- merge(variance_hb_draws, credibility, by.x = ".variable", by.y = ".variable")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-50-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-53-1.png)<!-- -->
 So a positive effect of distance from either range limit on the
 coefficient of variation, a negative effect of absolute elevation, and a
 negative interaction term. Next, hematocrit:
@@ -1092,7 +1190,7 @@ variance_hct_draws <- variance_hct_draws %>%
 variance_hct_draws <- merge(variance_hct_draws, credibility, by.x = ".variable", by.y = ".variable")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-52-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-55-1.png)<!-- -->
 Similar, but not identical, results. Lastly, MCHC:
 
 ``` r
@@ -1114,7 +1212,7 @@ variance_mchc_draws <- variance_mchc_draws %>%
 variance_mchc_draws <- merge(variance_mchc_draws, credibility, by.x = ".variable", by.y = ".variable")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-54-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-57-1.png)<!-- -->
 In contrast, very little signal here.
 
 As with our slope data, let’s make counterfactual plots for credible
@@ -1129,9 +1227,9 @@ counter_bin_hb <- read_csv("~/Dropbox/andean_range_limits/data/variance_hb_bin_c
 variance_df_m <- read_csv("~/Dropbox/andean_range_limits/data/blood_variance_m.csv")
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-56-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-59-1.png)<!-- -->
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-57-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-60-1.png)<!-- -->
 
 Now, the interaction of these variables:
 
@@ -1153,7 +1251,7 @@ variance_hb_interaction$panel <- plyr::revalue(variance_hb_interaction$panel, c(
                                 "panel_2"="Bin. Elev = +2"))
 ```
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-59-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-62-1.png)<!-- -->
 
 Here, we see that at higher elevations, the positive effect of distance
 from range edge on the coefficient of variation of hemoglobin values is
@@ -1162,9 +1260,9 @@ reduced.
 For hematocrit, we see credible effects of bin elevation and distance
 from range edge:
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-61-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-64-1.png)<!-- -->
 
-![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-62-1.png)<!-- -->
+![](01_blood_data_exploration_files/figure-gfm/unnamed-chunk-65-1.png)<!-- -->
 
 As previously noted, there’s nothing to visualize for MCHC.
 

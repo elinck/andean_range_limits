@@ -772,6 +772,27 @@ slope_mchc_loo
 ```
 For the slope of change in MCHC, the null model is again best, and the SEs are again large. 
 
+```{r, warning=FALSE, mess=FALSE}
+variance_hb_loo <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hb_loo_elpd.csv")
+variance_hb_loo 
+```
+
+For variance within a given elevational band in hemoglobin, the model with an interaction term but without predictors is best, with large SEs. 
+
+```{r, warning=FALSE, mess=FALSE}
+variance_hct_loo <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_hct_loo_elpd.csv")
+variance_hct_loo 
+```
+
+For variance within a given elevational band in hematocrit, the model without and interaction term and without predictors is best, and we can be fairly confident in the improvement over the null. 
+
+```{r, warning=FALSE, mess=FALSE}
+variance_mchc_loo <- read_csv("~/Dropbox/andean_range_limits/data/variance_full_mchc_loo_elpd.csv")
+variance_mchc_loo 
+```
+
+For variance within a given elevational band in MCHC, the model without and interaction term and without predictors is best, but the SE associated with that difference is large. 
+
 Next, let's visualize effect sizes for the best-fit models. We'll start with the slope model for hemoglobin:
 
 ```{r, warning=FALSE, message=FALSE}

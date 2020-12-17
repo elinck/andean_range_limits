@@ -722,9 +722,9 @@ Formally, the full model predicting slope of change in a given blood parameter a
 
 $$
 \begin{split}
-S_{EST,i} \sim Normal(\mu_{i},\sigma) \\
+S_{EST,i} \sim Student(\mu_{i},\sigma) \\
 \mu_{i} = \alpha + \alpha_{j} + \beta_{R}R_{i} + \beta_{E}E_{i} + \beta_{P}P_{i} + \beta_{M}M_{i} + \beta_{RE}R_{i}E_{i}  \\
-S_{OBS,i} \sim Normal(S_{EST,i}, S_{SE,i}) \\
+S_{OBS,i} \sim Student(S_{EST,i}, S_{SE,i}) \\
 \alpha \sim Normal(0,10) \\
 \alpha_{j} \sim Normal(\alpha, \sigma_{A}) \\
 \beta_{R} \sim Normal(0,2.5) \\
@@ -741,6 +741,7 @@ Our basic model for blood trait variance is similar, though this time we do not 
 
 $$
 \begin{split}
+V_{i} \sim Lognormal(\mu_{i}, \alpha) \\
 \mu_{i} = \alpha + \alpha_{j} + \beta_{E}E_{i} + \beta_{D}E_{i} + \beta_{ED}E_{i}D_{i}  \\
 \alpha \sim Normal(0,10) \\
 \alpha_{j} \sim Normal(\alpha, \sigma_{A}) \\

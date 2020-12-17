@@ -810,9 +810,9 @@ parameter across elevation is defined as follows:
 
 \[
 \begin{split}
-S_{EST,i} \sim Normal(\mu_{i},\sigma) \\
+S_{EST,i} \sim Student(\mu_{i},\sigma) \\
 \mu_{i} = \alpha + \alpha_{j} + \beta_{R}R_{i} + \beta_{E}E_{i} + \beta_{P}P_{i} + \beta_{M}M_{i} + \beta_{RE}R_{i}E_{i}  \\
-S_{OBS,i} \sim Normal(S_{EST,i}, S_{SE,i}) \\
+S_{OBS,i} \sim Student(S_{EST,i}, S_{SE,i}) \\
 \alpha \sim Normal(0,10) \\
 \alpha_{j} \sim Normal(\alpha, \sigma_{A}) \\
 \beta_{R} \sim Normal(0,2.5) \\
@@ -837,6 +837,7 @@ do not model measurement error:
 
 \[
 \begin{split}
+V_{i} \sim Lognormal(\mu_{i}, \alpha) \\
 \mu_{i} = \alpha + \alpha_{j} + \beta_{E}E_{i} + \beta_{D}E_{i} + \beta_{ED}E_{i}D_{i}  \\
 \alpha \sim Normal(0,10) \\
 \alpha_{j} \sim Normal(\alpha, \sigma_{A}) \\

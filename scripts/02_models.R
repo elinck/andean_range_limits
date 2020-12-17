@@ -29,172 +29,10 @@ variance.tree <- ape::read.tree("~/Dropbox/andean_range_limits/data/blood_varian
 # load variance data
 variance_df  <- read.csv("~/Dropbox/andean_range_limits/data/blood_variances.csv")
 
-### basic distribution models, slope and variance
-
-slope_hb_dist <- 
-  brm(data = slope_df, family = student(),
-      slope_hb | se(error_hb, sigma=TRUE) ~ 1,
-      inits = inits_list,
-      prior = c(
-        prior(normal(0, 10), "Intercept"),
-        prior(cauchy(0, 2.5), "sigma")),
-      iter = 10000, warmup = 5000, cores = 2, chains = 2,
-      control = list(adapt_delta = 0.99,
-                     max_treedepth = 12),
-      save_mevars = TRUE
-  )
-
-# pp check
-pp_check(slope_hb_dist, nsamples = 100) + xlim(-0.025, 0.025)
-
-# trace and density plots
-plot(slope_hb_dist)
-
-# pairwise plots
-pairs(slope_hb_dist)
-
-# export predictions
-predict(slope_hb_dist, summary=FALSE, nsamples = 100) %>% 
-  write.csv("~/Dropbox/andean_range_limits/data/slope_hb_dist_draws.csv")
-
-
-slope_hct_dist <- 
-  brm(data = slope_df, family = student(),
-      slope_hct | se(error_hct, sigma=TRUE) ~ 1,
-      inits = inits_list,
-      prior = c(
-        prior(normal(0, 10), "Intercept"),
-        prior(cauchy(0, 2.5), "sigma")),
-      iter = 10000, warmup = 5000, cores = 2, chains = 2,
-      control = list(adapt_delta = 0.99,
-                     max_treedepth = 12),
-      save_mevars = TRUE
-  )
-
-# pp check
-pp_check(slope_hct_dist, nsamples = 50) + xlim(-0.001, 0.001)
-
-# trace and density plots
-plot(slope_hct_dist)
-
-# pairwise plots
-pairs(slope_hct_dist)
-
-# export predictions
-predict(slope_hct_dist, summary=FALSE, nsamples = 100) %>% 
-  write.csv("~/Dropbox/andean_range_limits/data/slope_hct_dist_draws.csv")
-
-slope_mchc_dist <- 
-  brm(data = slope_df, family = student(),
-      slope_mchc | se(error_mchc, sigma=TRUE) ~ 1,
-      inits = inits_list,
-      prior = c(
-        prior(normal(0, 10), "Intercept"),
-        prior(cauchy(0, 2.5), "sigma")),
-      iter = 10000, warmup = 5000, cores = 2, chains = 2,
-      control = list(adapt_delta = 0.99,
-                     max_treedepth = 12),
-      save_mevars = TRUE
-  )
-
-# pp check
-pp_check(slope_mchc_dist, nsamples = 50) + xlim(-0.025, 0.025)
-
-# trace and density plots
-plot(slope_mchc_dist)
-
-# pairwise plots
-pairs(slope_mchc_dist)
-
-# export predictions
-predict(slope_mchc_dist, summary=FALSE, nsamples = 100) %>% 
-  write.csv("~/Dropbox/andean_range_limits/data/slope_mchc_dist_draws.csv")
-
-variance_hb_dist <- 
-  brm(data = variance_df, family = lognormal(),
-      variance_hb ~ 1,
-      inits = inits_list,
-      prior = c(
-        prior(normal(0, 10), "Intercept"),
-        prior(cauchy(0, 2.5), "sigma")),
-      iter = 10000, warmup = 5000, cores = 2, chains = 2,
-      control = list(adapt_delta = 0.99,
-                     max_treedepth = 12),
-      save_mevars = TRUE
-  )
-
-# pp check
-pp_check(variance_hb_dist, nsamples = 100) 
-
-# trace and density plots
-plot(variance_hb_dist)
-
-# pairwise plots
-pairs(variance_hb_dist)
-
-# export predictions
-predict(variance_hb_dist, summary=FALSE, nsamples = 100) %>% 
-  write.csv("~/Dropbox/andean_range_limits/data/variance_hb_dist_draws.csv")
-
-variance_hct_dist <- 
-  brm(data = variance_df, family = lognormal(),
-      variance_hct ~ 1,
-      inits = inits_list,
-      prior = c(
-        prior(normal(0, 10), "Intercept"),
-        prior(cauchy(0, 2.5), "sigma")),
-      iter = 10000, warmup = 5000, cores = 2, chains = 2,
-      control = list(adapt_delta = 0.99,
-                     max_treedepth = 12),
-      save_mevars = TRUE
-  )
-
-# pp check
-pp_check(variance_hct_dist, nsamples = 50)
-
-# trace and density plots
-plot(variance_hct_dist)
-
-# pairwise plots
-pairs(variance_hct_dist)
-
-# export predictions
-predict(variance_hct_dist, summary=FALSE, nsamples = 100) %>% 
-  write.csv("~/Dropbox/andean_range_limits/data/variance_hct_dist_draws.csv")
-
-variance_mchc_dist <- 
-  brm(data = variance_df, family = lognormal(),
-      variance_mchc ~ 1,
-      inits = inits_list,
-      prior = c(
-        prior(normal(0, 10), "Intercept"),
-        prior(cauchy(0, 2.5), "sigma")),
-      iter = 10000, warmup = 5000, cores = 2, chains = 2,
-      control = list(adapt_delta = 0.99,
-                     max_treedepth = 12),
-      save_mevars = TRUE
-  )
-
-# pp check
-pp_check(variance_mchc_dist, nsamples = 50) 
-
-# trace and density plots
-plot(variance_mchc_dist)
-
-# pairwise plots
-pairs(variance_mchc_dist)
-
-# export predictions
-predict(variance_mchc_dist, summary=FALSE, nsamples = 100) %>% 
-  write.csv("~/Dropbox/andean_range_limits/data/variance_mchc_dist_draws.csv")
-
-
-### slope data prep for predictive models
-
 # check order of magnitude of variables
 head(slope_df)
 
-# make variables same order of magnitude, standarize
+# make variables same order of magnitude
 slope_df <- 
   slope_df %>% mutate(slope_hb = slope_hb*1e3,
                     error_hb = error_hb*1e3,
@@ -211,6 +49,7 @@ slope_df <-
                       sampling_range_s = (sampling_range - mean(sampling_range)) / sd(median_elevation),
                       mass_s = (mass - mean(mass)) / sd(mass))
 
+
 # add "phylo" variable
 slope_df$phylo <- slope_df$species
 
@@ -220,7 +59,7 @@ A <- ape::vcv.phylo(slope.tree)
 # write transformed slope data 
 write.csv(slope_df, "~/Dropbox/andean_range_limits/data/blood_slopes_m.csv")
 
-### slope models, hemoglobin
+### predictive slope models, hemoglobin
 
 # here we specify the initial (i.e., starting) values for models with a predictor
 inits      <- list(Yl = slope_df$slope_hb)
@@ -418,7 +257,6 @@ slope_hb_1 %>%
 slope_hb_3 %>%
   gather_draws(b_elev_range_s, b_median_elevation_s, b_mass_s, b_sampling_range_s) %>%
   write.csv("~/Dropbox/andean_range_limits/data/slope_hb_draws.csv")
-
 
 # export looic
 write.csv(as.data.frame(loo_slope_hb$diffs), "~/Dropbox/andean_range_limits/data/slope_full_hb_loo_elpd.csv")

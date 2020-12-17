@@ -202,38 +202,38 @@ for(i in blood_df_sub$species){
 sp_list <- as.vector(sp_list)
 
 # subset down to "good" species
-blood_df_sub <- blood_df_sub[blood_df_sub$species %in% sp_list,]
+blood_df_big <- blood_df_sub[blood_df_sub$species %in% sp_list,]
 
-length(unique(blood_df$species)) # number of unique species before filtering
+length(unique(blood_df_sub$species)) # number of unique species before filtering
 ```
 
-    ## [1] 526
+    ## [1] 522
 
 ``` r
-nrow(blood_df) # number of unique records before filtering
+nrow(blood_df_sub) # number of unique records before filtering
 ```
 
-    ## [1] 3962
+    ## [1] 3875
 
 ``` r
-length(unique(blood_df_sub$species)) # number of unique species after filtering
+length(unique(blood_df_big$species)) # number of unique species after filtering
 ```
 
     ## [1] 241
 
 ``` r
-nrow(blood_df_sub) # number of unique records after filtering
+nrow(blood_df_big) # number of unique records after filtering
 ```
 
     ## [1] 3316
 
-We’ll now merge these data with the Stotz data. We’re using the
+We’ll now merge these datasets with the Stotz data. We’re using the
 parameter `all.x=TRUE`, which just means we aren’t going to drop blood
 data if there’s not a taxonomy match with the Stotz table.
 
 ``` r
 stotz$binomial <- paste0(stotz$genus, " ", stotz$species) # create single col for sp.
-blood_df_stotz <- merge(blood_df_sub, stotz, by.x = "species", by.y = "binomial", 
+blood_df_stotz <- merge(blood_df_big, stotz, by.x = "species", by.y = "binomial", 
                         all.x=TRUE)
 head(blood_df_stotz)
 ```
@@ -321,7 +321,7 @@ stotz_rev <- cbind.data.frame(stotz_rev$GENUS, stotz_rev$SPECIES,
                           stotz_rev$MIN, stotz_rev$MAX, stotz_rev$MIDPT.ELEV)
 colnames(stotz_rev) <- c("genus","species","elev_min","elev_max","elev_midpt")
 stotz_rev$binomial <- paste0(stotz_rev$genus, " ", stotz_rev$species)
-blood_df_stotz <- merge(blood_df_sub, stotz_rev, by.x = "species", by.y = "binomial", 
+blood_df_stotz <- merge(blood_df_big, stotz_rev, by.x = "species", by.y = "binomial", 
                         all.x=TRUE)
 ```
 
@@ -334,7 +334,7 @@ length(missing)
 
     ## [1] 1
 
-Yep—let’s see what it is.
+Yep. Let’s see what it is.
 
 ``` r
 blood_df_stotz[is.na(blood_df_stotz$elev_min),]$species %>% unique()
@@ -373,6 +373,7 @@ For calculating variance down the road, we also need to records based on
 their relative position in a species’ elevational range.
 
 ``` r
+# full dataset
 vardf <- list()
 for(i in unique(blood_df_stotz_pass$species)){
   tmp <- blood_df_stotz_pass[blood_df_stotz_pass$species==i,]
@@ -810,19 +811,19 @@ parameter across elevation is defined as follows:
 \[
 \begin{split}
 S_{EST,i} \sim Normal(\mu_{i},\sigma) \\
-\mu_{i} = \alpha + \alpha_{j} + \beta_{R}R_{i} + \beta_{E}E_{i} + \beta_{S}S_{i} + \beta_{M}M_{i} + \beta_{RM}R_{i}E_{i}  \\
+\mu_{i} = \alpha + \alpha_{j} + \beta_{R}R_{i} + \beta_{E}E_{i} + \beta_{P}P_{i} + \beta_{M}M_{i} + \beta_{RE}R_{i}E_{i}  \\
 S_{OBS,i} \sim Normal(S_{EST,i}, S_{SE,i}) \\
-\alpha \sim Normal(0,0.5) \\
+\alpha \sim Normal(0,10) \\
 \alpha_{j} \sim Normal(\alpha, \sigma_{A}) \\
 \beta_{R} \sim Normal(0,2.5) \\
 \beta_{E} \sim Normal(0,2.5) \\
+\beta_{P} \sim Normal(0,2.5) \\
 \beta_{M} \sim Normal(0,2.5) \\
-\beta_{S} \sim Normal(0,2.5) \\
-\beta_{MR} \sim Normal(0,2.5) \\
+\beta_{RE} \sim Normal(0,2.5) \\
 \sigma \sim Cauchy(0,2.5) \\
 \end{split}
 \] where \(R\) is range width, \(E\) is median range elevation, \(M\) is
-mass, \(S\) is sampling range (the sampled proportion of total estimated
+mass, \(P\) is sampling range (the sampled proportion of total estimated
 elevational range) and \(A\) is a covariance matrix of phylogenetic
 distance among taxa. Note that we model measurement error by
 incorporating observed standard error from the simple linear regressions
@@ -837,7 +838,7 @@ do not model measurement error:
 \[
 \begin{split}
 \mu_{i} = \alpha + \alpha_{j} + \beta_{E}E_{i} + \beta_{D}E_{i} + \beta_{ED}E_{i}D_{i}  \\
-\alpha \sim Normal(0,0.5) \\
+\alpha \sim Normal(0,10) \\
 \alpha_{j} \sim Normal(\alpha, \sigma_{A}) \\
 \beta_{E} \sim Normal(0,2.5) \\
 \beta_{D} \sim Normal(0,2.5) \\
@@ -1386,226 +1387,80 @@ dev.off()
     ## quartz_off_screen 
     ##                 2
 
-Next, let’s make a plot of the distribution of empirical slope values
-against the modeled posterior probability distributions.
+Next, let’s make a plot of the distribution of empirical slope and
+variance values, along with their respective median and 50%
+interquantile range:
 
 ``` r
-# load modeled data
-slope_hb_posterior <- read_csv("~/Dropbox/andean_range_limits/data/slope_hb_dist_draws.csv")
-slope_hb_posterior <- slope_hb_posterior %>% gather(key="sample", value="value", 2:138)
-slope_hb_q <- slope_hb_posterior %>% median_hdi(value, .width = c(.50, .89, .95))
-slope_hb_posterior$sim <- rep((1:100), each=137)
-slope_hct_posterior <- read_csv("~/Dropbox/andean_range_limits/data/slope_hct_dist_draws.csv")
-slope_hct_posterior <- slope_hct_posterior %>% gather(key="sample", value="value", 2:138)
-slope_hct_q <- slope_hct_posterior %>% median_hdi(value, .width = c(.50, .89, .95))
-slope_hct_posterior$sim <- rep((1:100), each=137)
-slope_mchc_posterior <- read_csv("~/Dropbox/andean_range_limits/data/slope_mchc_dist_draws.csv")
-slope_mchc_posterior <- slope_mchc_posterior %>% gather(key="sample", value="value", 2:138)
-slope_mchc_q <- slope_mchc_posterior %>% median_hdi(value, .width = c(.50, .89, .95))
-slope_mchc_posterior$sim <- rep((1:100), each=137)
-
-# load empirical data
+# load empirical slope data, manipulate for faceting
 slopes_empirical <- read_csv("~/Dropbox/andean_range_limits/data/blood_slopes.csv")
+slopes_dist <- slopes_empirical %>% 
+  select(slope_hb, slope_hct, slope_mchc) %>% 
+  gather()
 
-# merge with posterior df
-slope_hb_posterior <- slope_hb_posterior[,3:4]
-slope_hb_posterior$data <- "Predicted"
-slope_hb_empirical <- cbind.data.frame(slopes_empirical$slope_hb, 
-                                       rep(1,137), 
-                                       rep("Empirical",137))
-colnames(slope_hb_empirical) <- c("value","sim","data")
-slope_hb_comp <- rbind.data.frame(slope_hb_empirical, 
-                               slope_hb_posterior)
+# calculate quantiles, add linetype legend
+slope_quants <- slopes_dist %>% 
+  group_by(key) %>% 
+  summarise(value = quantile(value, c(0.25, 0.5, 0.75)), 
+            q = c(0.25, 0.5, 0.75))
+slope_quants <- slope_quants %>% 
+  mutate(lt = case_when(
+    q == 0.25 ~ "dashed",
+    q == 0.5 ~ "solid",
+    q == 0.75 ~ "dashed"
+  ))
 
-# merge with posterior df
-slope_hct_posterior <- slope_hct_posterior[,3:4]
-slope_hct_posterior$data <- "Predicted"
-slope_hct_empirical <- cbind.data.frame(slopes_empirical$slope_hct, 
-                                       rep(1,137), 
-                                       rep("Empirical",137))
-colnames(slope_hct_empirical) <- c("value","sim","data")
-slope_hct_comp <- rbind.data.frame(slope_hct_empirical, 
-                               slope_hct_posterior)
-
-# merge with posterior df
-slope_mchc_posterior <- slope_mchc_posterior[,3:4]
-slope_mchc_posterior$data <- "Predicted"
-slope_mchc_empirical <- cbind.data.frame(slopes_empirical$slope_mchc, 
-                                       rep(1,137), 
-                                       rep("Empirical",137))
-colnames(slope_mchc_empirical) <- c("value","sim","data")
-slope_mchc_comp <- rbind.data.frame(slope_mchc_empirical, 
-                               slope_mchc_posterior)
-
-# assign to plot
-p37 <- ggplot(slope_hb_comp, aes(x=value)) + 
+# plot, top row
+p37 <- ggplot(slopes_dist, aes(x=value)) + 
   theme_bw() +
-  geom_density(aes(fill=data), bins=60, alpha=0.5) +
-  scale_fill_manual(values=c("white","gray40")) +
-  geom_vline(xintercept = as.numeric(slope_hb_q[2,1]), linetype="solid",color="red") +
-  geom_vline(xintercept = as.numeric(slope_hb_q[2,2]), linetype="dashed",color="red") +
-  geom_vline(xintercept = as.numeric(slope_hb_q[2,3]), linetype="dashed",color="red") +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        axis.text.y = element_blank(),
+        panel.spacing.x = unit(4, "mm")) +
+  geom_density(fill="gray40", color="black", alpha=0.5) +
   xlab("Slope") +
   ylab("Density") +
-  xlim(-0.015,0.015) +
-  theme(panel.grid = element_blank())
+  geom_vline(data=slope_quants, aes(xintercept=value, linetype=lt), color="red") +
+  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) +
+  facet_wrap(~key, scales="free")
 
-# assign to plot
-p38 <- ggplot(slope_hct_comp, aes(x=value)) + 
-  theme_bw() +
-  geom_density(aes(fill=data), bins=60, alpha=0.5) +
-  scale_fill_manual(values=c("white","gray40")) +
-  geom_vline(xintercept = as.numeric(slope_hct_q[2,1]), linetype="solid",color="red") +
-  geom_vline(xintercept = as.numeric(slope_hct_q[2,2]), linetype="dashed",color="red") +
-  geom_vline(xintercept = as.numeric(slope_hct_q[2,3]), linetype="dashed",color="red") +
-  xlab("Slope") +
-  xlim(-0.0005,0.0005) +
-  theme(panel.grid = element_blank())
-
-# assign to plot
-p39 <- ggplot(slope_mchc_comp, aes(x=value)) + 
-  theme_bw() +
-  geom_density(aes(fill=data), bins=60, alpha=0.5) +
-  scale_fill_manual(values=c("white","gray40")) +
-  geom_vline(xintercept = as.numeric(slope_mchc_q[2,1]), linetype="solid",color="red") +
-  geom_vline(xintercept = as.numeric(slope_mchc_q[2,2]), linetype="dashed",color="red") +
-  geom_vline(xintercept = as.numeric(slope_mchc_q[2,3]), linetype="dashed",color="red") +
-  xlab("Slope") +
-  xlim(-0.02,0.02) +
-  theme(panel.grid = element_blank())
-
-# create row of plots for figure
-fig_2_top <- plot_grid(
-  p37 + theme(legend.position="none",
-              legend.title = element_blank(),
-              axis.text.y = element_blank()),
-  p38 + theme(legend.position="none",
-              axis.title.y = element_blank(),
-              axis.text.y = element_blank()),
-  p39 + theme(legend.position="none",
-              axis.title.y = element_blank(),
-              axis.text.y = element_blank()),
-  align = 'vh',
-  hjust = -1,
-  nrow = 1
-)
-```
-
-Now we’ll do the same for basic variance models:
-
-``` r
-# load modeled data
-variance_hb_posterior <- read_csv("~/Dropbox/andean_range_limits/data/variance_hb_dist_draws.csv")
-variance_hb_posterior <- variance_hb_posterior %>% gather(key="sample", value="value", 2:119)
-variance_hb_q <- variance_hb_posterior %>% median_hdi(value, .width = c(.50, .89, .95))
-variance_hb_posterior$sim <- rep((1:100), each=118)
-variance_hct_posterior <- read_csv("~/Dropbox/andean_range_limits/data/variance_hct_dist_draws.csv")
-variance_hct_posterior <- variance_hct_posterior %>% gather(key="sample", value="value", 2:119)
-variance_hct_q <- variance_hct_posterior %>% median_hdi(value, .width = c(.50, .89, .95))
-variance_hct_posterior$sim <- rep((1:100), each=118)
-variance_mchc_posterior <- read_csv("~/Dropbox/andean_range_limits/data/variance_mchc_dist_draws.csv")
-variance_mchc_posterior <- variance_mchc_posterior %>% gather(key="sample", value="value", 2:119)
-variance_mchc_q <- variance_mchc_posterior %>% median_hdi(value, .width = c(.50, .89, .95))
-variance_mchc_posterior$sim <- rep((1:100), each=118)
-
-# load empirical data
+# load empirical variance data, manipulate for faceting
 variances_empirical <- read_csv("~/Dropbox/andean_range_limits/data/blood_variances.csv")
+variances_dist <- variances_empirical %>% 
+  select(variance_hb, variance_hct, variance_mchc) %>% 
+  gather()
 
-# merge with posterior df
-variance_hb_posterior <- variance_hb_posterior[,3:4]
-variance_hb_posterior$data <- "Predicted"
-variance_hb_empirical <- cbind.data.frame(variances_empirical$variance_hb, 
-                                       rep(1,118), 
-                                       rep("Empirical",118))
-colnames(variance_hb_empirical) <- c("value","sim","data")
-variance_hb_comp <- rbind.data.frame(variance_hb_empirical, 
-                               variance_hb_posterior)
+# calculate quantiles, add linetype legend
+variance_quants <- variances_dist %>% 
+  group_by(key) %>% 
+  summarise(value = quantile(value, c(0.25, 0.5, 0.75)), 
+            q = c(0.25, 0.5, 0.75))
+variance_quants <- variance_quants %>% 
+  mutate(lt = case_when(
+    q == 0.25 ~ "dashed",
+    q == 0.5 ~ "solid",
+    q == 0.75 ~ "dashed"
+  ))
 
-# merge with posterior df
-variance_hct_posterior <- variance_hct_posterior[,3:4]
-variance_hct_posterior$data <- "Predicted"
-variance_hct_empirical <- cbind.data.frame(variances_empirical$variance_hct, 
-                                       rep(1,118), 
-                                       rep("Empirical",118))
-colnames(variance_hct_empirical) <- c("value","sim","data")
-variance_hct_comp <- rbind.data.frame(variance_hct_empirical, 
-                               variance_hct_posterior)
-
-# merge with posterior df
-variance_mchc_posterior <- variance_mchc_posterior[,3:4]
-variance_mchc_posterior$data <- "Predicted"
-variance_mchc_empirical <- cbind.data.frame(variances_empirical$variance_mchc, 
-                                       rep(1,118), 
-                                       rep("Empirical",118))
-colnames(variance_mchc_empirical) <- c("value","sim","data")
-variance_mchc_comp <- rbind.data.frame(variance_mchc_empirical, 
-                               variance_mchc_posterior)
-
-# assign to plot
-p40 <- ggplot(variance_hb_comp, aes(x=value)) + 
+# plot, top row
+p38 <- ggplot(variances_dist, aes(x=value)) + 
   theme_bw() +
-  geom_density(aes(fill=data), bins=60, alpha=0.5) +
-  scale_fill_manual(values=c("white","gray40")) +
-  geom_vline(xintercept = as.numeric(variance_hb_q[2,1]), linetype="solid",color="red") +
-  geom_vline(xintercept = as.numeric(variance_hb_q[2,2]), linetype="dashed",color="red") +
-  geom_vline(xintercept = as.numeric(variance_hb_q[2,3]), linetype="dashed",color="red") +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        axis.text.y = element_blank(),
+        panel.spacing.x = unit(4, "mm")) +
+  geom_density(fill="gray40", color="black", alpha=0.5) +
   xlab("Variance") +
   ylab("Density") +
-  theme(panel.grid = element_blank())
+  xlim(0,0.25) +
+  geom_vline(data=variance_quants, aes(xintercept=value, linetype=lt), color="red") +
+  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) +
+  facet_wrap(~key, scales="free_y")
 
-# assign to plot
-p41 <- ggplot(variance_hct_comp, aes(x=value)) + 
-  theme_bw() +
-  geom_density(aes(fill=data), bins=60, alpha=0.5) +
-  scale_fill_manual(values=c("white","gray40")) +
-  geom_vline(xintercept = as.numeric(variance_hct_q[2,1]), linetype="solid",color="red") +
-  geom_vline(xintercept = as.numeric(variance_hct_q[2,2]), linetype="dashed",color="red") +
-  geom_vline(xintercept = as.numeric(variance_hct_q[2,3]), linetype="dashed",color="red") +
-  xlab("Variance") +
-  theme(panel.grid = element_blank())
-
-# assign to plot
-p42 <- ggplot(variance_mchc_comp, aes(x=value)) + 
-  theme_bw() +
-  geom_density(aes(fill=data), bins=60, alpha=0.5) +
-  scale_fill_manual(values=c("white","gray40")) +
-  geom_vline(xintercept = as.numeric(variance_mchc_q[2,1]), linetype="solid",color="red") +
-  geom_vline(xintercept = as.numeric(variance_mchc_q[2,2]), linetype="dashed",color="red") +
-  geom_vline(xintercept = as.numeric(variance_mchc_q[2,3]), linetype="dashed",color="red") +
-  xlab("Variance") +
-  theme(panel.grid = element_blank())
-
-# create row of plots for figure
-fig_2_bottom <- plot_grid(
-  p40 + theme(legend.position="none",
-              legend.title = element_blank(),
-              axis.text.y = element_blank()),
-  p41 + theme(legend.position="none",
-              axis.title.y = element_blank(),
-              axis.text.y = element_blank()),
-  p42 + theme(legend.position="none",
-              axis.title.y = element_blank(),
-              axis.text.y = element_blank()),
-  align = 'vh',
-  hjust = -1,
-  nrow = 1
-)
-```
-
-And then merge and export:
-
-``` r
-# grab legend object, modify
-legend <- get_legend(
-  p40 +
-    guides(color = guide_legend(nrow = 1)) +
-    theme(legend.position = "bottom",
-          legend.title = element_blank())
-)
-
-# build figure
-fig_2_nl <- plot_grid(fig_2_top, fig_2_bottom, labels=c("A","B"), ncol=1)
-fig_2 <- plot_grid(fig_2_nl, legend, ncol = 1, rel_heights = c(1, .1))
+# combine
+fig_2 <- plot_grid(p37, p38, nrow=2, ncol=1, labels=c("A","B"))
 
 # export
 pdf("~/Dropbox/andean_range_limits/figures/figure_2.pdf", height = 5, width=9)
@@ -1616,75 +1471,43 @@ dev.off()
     ## quartz_off_screen 
     ##                 2
 
-For the paper, let’s note the highest density posterior intervals:
+For the paper, let’s note the median and IQR values:
 
 ``` r
-slope_hb_q
+slope_quants
 ```
 
-    ## # A tibble: 3 x 6
-    ##      value    .lower  .upper .width .point .interval
-    ##      <dbl>     <dbl>   <dbl>  <dbl> <chr>  <chr>    
-    ## 1 0.000781 -0.000305 0.00168   0.5  median hdi      
-    ## 2 0.000781 -0.00342  0.00506   0.89 median hdi      
-    ## 3 0.000781 -0.00581  0.00729   0.95 median hdi
+    ## # A tibble: 9 x 4
+    ## # Groups:   key [3]
+    ##   key             value     q lt    
+    ##   <chr>           <dbl> <dbl> <chr> 
+    ## 1 slope_hb   -0.000382   0.25 dashed
+    ## 2 slope_hb    0.000732   0.5  solid 
+    ## 3 slope_hb    0.00166    0.75 dashed
+    ## 4 slope_hct  -0.0000125  0.25 dashed
+    ## 5 slope_hct   0.0000228  0.5  solid 
+    ## 6 slope_hct   0.0000518  0.75 dashed
+    ## 7 slope_mchc -0.00123    0.25 dashed
+    ## 8 slope_mchc  0.0000718  0.5  solid 
+    ## 9 slope_mchc  0.00121    0.75 dashed
 
 ``` r
-slope_hct_q
+variance_quants
 ```
 
-    ## # A tibble: 5 x 6
-    ##       value      .lower     .upper .width .point .interval
-    ##       <dbl>       <dbl>      <dbl>  <dbl> <chr>  <chr>    
-    ## 1 0.0000179 -0.00000511  0.0000435   0.5  median hdi      
-    ## 2 0.0000179 -0.0000854   0.000130    0.89 median hdi      
-    ## 3 0.0000179 -0.000166   -0.000166    0.95 median hdi      
-    ## 4 0.0000179 -0.000157    0.000190    0.95 median hdi      
-    ## 5 0.0000179  0.000209    0.000213    0.95 median hdi
-
-``` r
-slope_mchc_q
-```
-
-    ## # A tibble: 3 x 6
-    ##      value   .lower  .upper .width .point .interval
-    ##      <dbl>    <dbl>   <dbl>  <dbl> <chr>  <chr>    
-    ## 1 0.000103 -0.00130 0.00139   0.5  median hdi      
-    ## 2 0.000103 -0.00518 0.00565   0.89 median hdi      
-    ## 3 0.000103 -0.00828 0.00815   0.95 median hdi
-
-``` r
-variance_hb_q
-```
-
-    ## # A tibble: 3 x 6
-    ##    value .lower .upper .width .point .interval
-    ##    <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
-    ## 1 0.0767 0.0520 0.0885   0.5  median hdi      
-    ## 2 0.0767 0.0334 0.125    0.89 median hdi      
-    ## 3 0.0767 0.0310 0.147    0.95 median hdi
-
-``` r
-variance_hct_q
-```
-
-    ## # A tibble: 3 x 6
-    ##    value .lower .upper .width .point .interval
-    ##    <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
-    ## 1 0.0742 0.0454 0.0827   0.5  median hdi      
-    ## 2 0.0742 0.0318 0.126    0.89 median hdi      
-    ## 3 0.0742 0.0274 0.147    0.95 median hdi
-
-``` r
-variance_mchc_q
-```
-
-    ## # A tibble: 3 x 6
-    ##    value .lower .upper .width .point .interval
-    ##    <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
-    ## 1 0.0495 0.0289 0.0553   0.5  median hdi      
-    ## 2 0.0495 0.0183 0.0864   0.89 median hdi      
-    ## 3 0.0495 0.0162 0.102    0.95 median hdi
+    ## # A tibble: 9 x 4
+    ## # Groups:   key [3]
+    ##   key            value     q lt    
+    ##   <chr>          <dbl> <dbl> <chr> 
+    ## 1 variance_hb   0.0617  0.25 dashed
+    ## 2 variance_hb   0.0752  0.5  solid 
+    ## 3 variance_hb   0.0983  0.75 dashed
+    ## 4 variance_hct  0.0579  0.25 dashed
+    ## 5 variance_hct  0.0743  0.5  solid 
+    ## 6 variance_hct  0.0982  0.75 dashed
+    ## 7 variance_mchc 0.0387  0.25 dashed
+    ## 8 variance_mchc 0.0497  0.5  solid 
+    ## 9 variance_mchc 0.0665  0.75 dashed
 
 Next, let’s plot confidence intervals for predictors for our full
 models:

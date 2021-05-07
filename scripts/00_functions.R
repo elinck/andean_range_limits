@@ -172,41 +172,24 @@ outliers_limits <- function(dataframe, min_sample, min_limit, min_range){
   return(dataframe)
 }
 
-# calculate 95% and 89% credible intervals and turn into color code from posterior dist
+
 credibility_coder <- function(dataframe){
-  
-  # calculate lower and upper bounds, merge with data
-  hct_lb_95 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.025)))
-  hct_ub_95 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.975)))
-  bounds_95 <- merge(hct_lb_95, hct_ub_95, by.x = ".variable", by.y = ".variable")
-  colnames(bounds_95) <- c(".variable", "lower_95", "upper_95")
-  hct_lb_89 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.055)))
-  hct_ub_89 <- dataframe %>% group_by(.variable) %>% summarise(quant = quantile(.value, probs=c(0.945)))
-  bounds_89 <- merge(hct_lb_89, hct_ub_89, by.x = ".variable", by.y = ".variable")
-  colnames(bounds_89) <- c(".variable", "lower_89", "upper_89")
-  bounds <- cbind.data.frame(bounds_95, bounds_89)[,-4]
-  
-  dataframe <- merge(dataframe, bounds, by.x = ".variable", by.y = ".variable")
-  
-  # turn into color codes based on credibility 
-  dataframe <- dataframe %>% mutate(
-    credible = case_when(
-      lower_95>0 & upper_95>0 ~ 1,
-      lower_95<0 & upper_95<0 ~ 1,
-      lower_89>0 & upper_89>0 ~ 2,
-      lower_89<0 & upper_89<0 ~ 2,
-      lower_89>0 & upper_89<0 | lower_95>0 & upper_95<0 ~ 0,
-      lower_89<0 & upper_89>0 | lower_95<0 & upper_95>0 ~ 0
-    )
-  )
-  
-  # make factor
-  dataframe$credible <- as.factor(dataframe$credible)
-  
-  # make tibble
-  dataframe <- dataframe %>% as_tibble()
-  
-  # output
-  return(dataframe)
+  dataframe$credible <- 0
+  df <- list()
+  for(i in unique(dataframe$.variable)){
+    sub <- dataframe[dataframe$.variable==i,]
+    sub <- sub %>% mutate(levels = case_when(
+      .lower < 0 & .upper < 0 & .width==0.95 | .lower > 0 & .upper > 0 & .width==0.95  ~ 1,
+      .lower < 0 & .upper < 0 & .width==0.89 | .lower > 0 & .upper > 0 & .width==0.89  ~ 2, 
+      .lower < 0 & .upper > 0 | .lower > 0 & .upper < 0 ~ 0,
+      .width==0.5 ~ 0
+    ))
+    if(1 %in% sub$levels){sub$credible <- 1} 
+    else if(2 %in% sub$levels){sub$credible <- 2} 
+    else {sub$credible <- 0} 
+    df[[i]] <- sub
+  }
+  new_df <- do.call(rbind, df)
+  return(new_df)
 }
 

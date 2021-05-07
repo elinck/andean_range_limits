@@ -128,7 +128,97 @@ More specifically, we're interested in the following questions:
 
 2) Is the variance of a blood trait parameter in a particular elevational band associated with the its absolute elevation or its distance from either an upper or lower range limit?
 
-To begin, we're going to load our data, take a look at it, and make some filtering choices.  
+### Predictions
+
+Let's start by making some predictions involving the slope and variance of blood traits under different models of their relationship with range breadth and limits. 
+
+
+```{r}
+# establish relationships, simulate data for plasticity models
+intercept1 <- 0
+range_breadth <- seq(1000,3500, by=30)
+slope1 <- 0.00001
+sigma <- 0.003
+eps <- rnorm(range_breadth, 0, sigma)
+hyp1 <- intercept1 + range_breadth*slope1 + eps
+model1 <- rep("plasticity increases with range breadth", length(range_breadth))
+df1 <- cbind.data.frame(range_breadth, hyp1, model1)
+colnames(df1) <- c("breadth", "plasticity", "model")
+intercept2 <- 0.045
+slope2 <- -0.00001
+hyp2 <- intercept2 + range_breadth*slope2 + eps
+model2 <- rep("plasticity constrains range breadth", length(range_breadth))
+df2 <- cbind.data.frame(range_breadth, hyp2, model2)
+colnames(df2) <- c("breadth", "plasticity", "model")
+intercept3 <- 0.02
+slope3 <- 0
+hyp3 <- intercept3 + range_breadth*slope3 + eps
+model3 <- rep("null hypothesis", length(range_breadth))
+df3 <- cbind.data.frame(range_breadth, hyp3, model3)
+colnames(df3) <- c("breadth", "plasticity", "model")
+plasticity_df <- rbind.data.frame(df1,df2,df3)
+plasticity_df$model <- as.factor(plasticity_df$model) 
+plasticity_df$model <- factor(plasticity_df$model, levels=c("plasticity increases with range breadth",
+                              "plasticity constrains range breadth",
+                              "null hypothesis"))
+
+# establish relationships, simulate data for variance models
+q1 <- ggplot(plasticity_df, aes(x=breadth, y=plasticity)) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank()) +
+  geom_point(pch=21, color="steelblue",stroke=1.1) +
+  facet_wrap(~model, nrow=1)
+
+# establish relationships, simulate data for plasticity models
+elevation1 <- rnorm(83, mean=2250, sd=750)
+y1 <- (elevation1-mean(elevation1))^2
+variance1 <- jitter(1-(y1/max(y1)), amount=0.25)
+df4 <- cbind.data.frame(elevation1, variance1)
+df4$model <- rep("central marginal hypothesis", nrow(df4))
+colnames(df4) <- c("elevation","variance","model")
+#elevation2 <- runif(83, 0, 4500)
+#y2 <- (elevation2-mean(elevation2))^2
+#variance2 <- jitter(1-(y2/max(y2)), amount=0.25)
+#df5 <- cbind.data.frame(elevation2, variance2)
+#df5$model <- rep("symmetrical hypothesis", nrow(df5))
+#colnames(df5) <- c("elevation","variance","model")
+elevation3 <- runif(83, 0, 4500)
+y3 <- ((elevation3-(mean(elevation3))+700)^3)
+variance3 <- jitter(1-(y3/max(y3)), amount=0.25)
+df6 <- cbind.data.frame(elevation3, variance3)
+df6$model <- rep("asymmetrical hypothesis", nrow(df6))
+colnames(df6) <- c("elevation","variance","model")
+elevation4 <- runif(83, 0, 4500)
+variance4 <- rnorm(83, mean=0.5, sd=0.1)
+df7 <- cbind.data.frame(elevation4, variance4)
+df7$model <- rep("null hypothesis", nrow(df7))
+colnames(df7) <- c("elevation","variance","model")
+var_df <- rbind.data.frame(df4,df6,df7)
+var_df$model <- as.factor(var_df$model) 
+var_df$model <- factor(var_df$model, levels=c("central marginal hypothesis",
+                                              "asymmetrical hypothesis",
+                                              "null hypothesis"))
+
+# establish relationships, simulate data for variance models
+q2 <- ggplot(var_df, aes(x=elevation, y=variance)) +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank()) +
+  geom_point(pch=21, color="red4",stroke=1.1) +
+  facet_wrap(~model, nrow=1)
+
+plot_grid(q1,q2,labels='AUTO',nrow=2)
+
+```
+
+Next, we're going to load our data, take a look at it, and make some filtering choices.  
 
 ### Cleaning
 
@@ -524,7 +614,7 @@ slope_df[grep("Ceratopipra_chloromeros", slope_df$species),]$species <- "Pipra_c
 slope_df[grep("Thamnophilus_bernardi", slope_df$species),]$species <- "Sakesphorus_bernardi"
 slope_df[grep("Cercomacroides_serva", slope_df$species),]$species <- "Cercomacra_serva"
 # slope_df[grep("Chloropipo_unicolor", slope_df$species),]$species <- "Xenopipo_unicolor"
-
+# slope_df[grep("Orochelidon_murina", slope_df$species),]$species <- "Pygochelidon_murina"
 
 # prune tree
 slope.tree <- keep.tip(supertree, slope_df$species)
@@ -698,23 +788,27 @@ To tackle that' we're going to build generative Bayesian models using Stan imple
 
 #### Slope  
 
-$H_{0}$: The slope of change in blood parameter values is unrelated to predictors (elevational range breadth, median range elevation, sampling range, mass, and the interaction of elevational range breadth and median range elevation) and best explained by phylogeny alone.
+$H_{0}$: The slope of change in blood parameter values is unrelated to predictors (elevational range breadth, median range elevation, sampling range, mass, and the interaction of elevational range breadth and median range elevation) and best explained by phylogeny alone
 
-$H_{1}$: The slope of change in blood parameter values is best explained by all predictors and phylogeny 
+$H_{1}$: The slope of change in blood parameter values is best explained by all predictors and phylogeny
 
 $H_{2}$: The slope of change in blood parameter values is best explained by the predictors without controlling for phylogeny
 
 $H_{3}$: The slope of change in blood parameter values is best explained by the predictors without controlling for phylogeny or including a term for the interaction of elevational range breadth and median range elevation
 
+$H_{4}$: The slope of change in blood parameter values is best explained by the predictors and phylogeny but without including a term for the interaction of elevational range breadth and median range elevation
+
 #### Variance
 
-$H_{0}$: Variance in a given 100 m elevation bin is unrelated to predictors (distance from range edge, median bin elevation, and the interaction of distance from range edge and median bin elevation) and best explained by phylogeny alone
+$H_{0}$: Variance in a given 100 m elevation bin is unrelated to predictors (distance from range edge, median bin elevation, and the interaction of distance from range edge and mean bin elevation) and best explained by phylogeny alone
 
 $H_{1}$: Variance in a given 100 m elevation bin is best explained by all predictors and phylogeny
 
-$H_{2}$: Variance in a given 100 m elevation bin is explained by a subset of predictors without controlling for phylogeny  
+$H_{2}$: Variance in a given 100 m elevation bin is best explained by predictors without controlling for phylogeny  
 
-$H_{2}$: Variance in a given 100 m elevation bin is explained by a subset of predictors without controlling for phylogeny or including a term for the interaction of distance from range edge and median bin elevation
+$H_{2}$: Variance in a given 100 m elevation bin is best explained by predictors without controlling for phylogeny or including a term for the interaction of distance from range edge and mean bin elevation
+
+$H_{4}$: Variance in a given 100 m elevation bin is best explained by the predictors and phylogeny but without including a term for the interaction of distance from range edge and mean bin elevation
 
 Each of these hypotheses is associated with a model with a corresponding variable name and number in the script `02_models.R`. For example, the model fit to slope of change in hemoglobin that includes all predictors and controls for phylogeny is saved as an object named `slope_hb_2`; the null model for variance in MCHC is titled `variance_mchc_0`, etc. 
 
@@ -762,6 +856,7 @@ Let's start by looking at LOOIC values for all the models:
 slope_hb_loo <- read_csv("~/Dropbox/andean_range_limits/data/slope_full_hb_loo_elpd.csv")
 slope_hb_loo
 ```
+
 So for the slope of change in hemoglobin, the model *without* or controlling for phylogeny is best—though the standard error is large enough we can't be very confident in that. 
 
 ```{r, warning=FALSE, mess=FALSE}
@@ -805,21 +900,22 @@ library(tidybayes)
 library(modelr)
 
 # load draws and evaluate levels of support for different variables with function
-slope_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_hb_draws_interaction.csv") %>% 
-  credibility_coder()
-
-# create data frame assiging variables to credibility levels
-credibility <- slope_hb_draws %>% distinct(.variable, credible)
+slope_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_hb_draws_interaction.csv") 
 
 # calculate width for point interval probabilities
 slope_hb_draws <- slope_hb_draws %>% 
   group_by(.variable) %>% 
-  median_hdi(.value, .width = c(.95, .8, .5)) %>%
+  median_hdi(.value, .width = c(.95, .89, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
 
-# merge dataframe with credibilty levels
-slope_hb_draws <- merge(slope_hb_draws, credibility, by.x = ".variable", by.y = ".variable")
+# assign credibility levels
+
+# assign credibility levels
+slope_hb_draws <- credibility_coder(slope_hb_draws)
+
+# turn into factor
+slope_hb_draws$credible <- as.factor(slope_hb_draws$credible)
 ```
 ```{r, echo=FALSE, fig.height=4,fig.width=6}
 p17 <- ggplot(slope_hb_draws, aes(y = fct_rev(.variable), 
@@ -851,21 +947,20 @@ Let's continue on to hematocrit.
 
 ```{r, message=FALSE, warning=FALSE}
 # load draws and evaluate levels of support for different variables with function
-slope_hct_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_hct_draws.csv") %>% 
-  credibility_coder()
-
-# create data frame assiging variables to credibility levels
-credibility <- slope_hct_draws %>% distinct(.variable, credible)
+slope_hct_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_hct_draws.csv")
 
 # calculate width for point interval probabilities
 slope_hct_draws <- slope_hct_draws %>% 
   group_by(.variable) %>% 
-  median_hdi(.value, .width = c(.95, .8, .5)) %>%
+  median_hdi(.value, .width = c(.95, .89, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
 
-# merge dataframe with credibilty levels
-slope_hct_draws <- merge(slope_hct_draws, credibility, by.x = ".variable", by.y = ".variable")
+# assign credibility levels
+slope_hct_draws <- credibility_coder(slope_hct_draws)
+
+# turn into factor
+slope_hct_draws$credible <- as.factor(slope_hct_draws$credible)
 ```
 ```{r, echo=FALSE, fig.height=4,fig.width=6}
 p18 <- ggplot(slope_hct_draws, aes(y = fct_rev(.variable), 
@@ -894,21 +989,20 @@ We find no credible effects for slope of change in hematocrit.
 
 ```{r, message=FALSE, warning=FALSE}
 # load draws and evaluate levels of support for different variables with function
-slope_mchc_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_mchc_draws.csv") %>% 
-  credibility_coder()
-
-# create data frame assiging variables to credibility levels
-credibility <- slope_mchc_draws %>% distinct(.variable, credible)
+slope_mchc_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_mchc_draws.csv")
 
 # calculate width for point interval probabilities
 slope_mchc_draws <- slope_mchc_draws %>% 
   group_by(.variable) %>% 
-  median_hdi(.value, .width = c(.95, .8, .5)) %>%
+  median_hdi(.value, .width = c(.95, .89, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
 
-# merge dataframe with credibilty levels
-slope_mchc_draws <- merge(slope_mchc_draws, credibility, by.x = ".variable", by.y = ".variable")
+# assign credibility levels
+slope_mchc_draws <- credibility_coder(slope_mchc_draws)
+
+# turn into factor
+slope_mchc_draws$credible <- as.factor(slope_mchc_draws$credible)
 ```
 ```{r, echo=FALSE, fig.height=4,fig.width=6}
 p19 <- ggplot(slope_mchc_draws, aes(y = fct_rev(.variable), 
@@ -972,21 +1066,20 @@ Next, let's look at effect sizes from our variance models, in the same order:
 
 ```{r, message=FALSE, warning=FALSE}
 # load draws and evaluate levels of support for different variables with function
-variance_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_hb_draws.csv") %>%
-  credibility_coder()
-
-# create data frame assiging variables to credibility levels
-credibility <- variance_hb_draws %>% distinct(.variable, credible)
+variance_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_hb_draws.csv")
 
 # calculate width for point interval probabilities
 variance_hb_draws <- variance_hb_draws %>% 
   group_by(.variable) %>% 
-  median_hdi(.value, .width = c(.95, .8, .5)) %>%
+  median_hdi(.value, .width = c(.95, .89, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
 
-# merge dataframe with credibilty levels
-variance_hb_draws <- merge(variance_hb_draws, credibility, by.x = ".variable", by.y = ".variable")
+# assign credibility levels
+variance_hb_draws <- credibility_coder(variance_hb_draws)
+
+# turn into factor
+variance_hb_draws$credible <- as.factor(variance_hb_draws$credible)
 ```
 ```{r, echo=FALSE, fig.height=4,fig.width=6}
 p21 <- ggplot(variance_hb_draws, aes(y = fct_rev(.variable), 
@@ -999,7 +1092,7 @@ p21 <- ggplot(variance_hb_draws, aes(y = fct_rev(.variable),
   scale_color_manual(values = c("black","darkred","darksalmon"),
                     name="Credible Interval",
                     breaks=c(0,1,2),
-                    labels=c("NA", "95%","89%")) +  
+                    labels=c("NA", "95%","89%")) + 
   theme_bw() +
   theme(panel.grid = element_blank(),
         strip.background = element_blank()) +
@@ -1015,21 +1108,20 @@ So a positive effect of distance from either range limit on the coefficient of v
 
 ```{r, message=FALSE, warning=FALSE}
 # load draws and evaluate levels of support for different variables with function
-variance_hct_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_hct_draws.csv") %>% 
-  credibility_coder()
-
-# create data frame assiging variables to credibility levels
-credibility <- variance_hct_draws %>% distinct(.variable, credible)
+variance_hct_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_hct_draws.csv")
 
 # calculate width for point interval probabilities
 variance_hct_draws <- variance_hct_draws %>% 
   group_by(.variable) %>% 
-  median_hdi(.value, .width = c(.95, .8, .5)) %>%
+  median_hdi(.value, .width = c(.95, .89, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
 
-# merge dataframe with credibilty levels
-variance_hct_draws <- merge(variance_hct_draws, credibility, by.x = ".variable", by.y = ".variable")
+# assign credibility levels
+variance_hct_draws <- credibility_coder(variance_hct_draws)
+
+# turn into factor
+variance_hct_draws$credible <- as.factor(variance_hct_draws$credible)
 ```
 ```{r, echo=FALSE, fig.height=4,fig.width=6}
 p22 <- ggplot(variance_hct_draws, aes(y = fct_rev(.variable), 
@@ -1058,21 +1150,20 @@ Similar, but not identical, results. Lastly, MCHC:
 
 ```{r, message=FALSE, warning=FALSE}
 # load draws and evaluate levels of support for different variables with function
-variance_mchc_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_mchc_draws.csv") %>%
-  credibility_coder()
-
-# create data frame assiging variables to credibility levels
-credibility <- variance_mchc_draws %>% distinct(.variable, credible)
+variance_mchc_draws <- read_csv("~/Dropbox/andean_range_limits/data/variance_mchc_draws.csv")
 
 # calculate width for point interval probabilities
 variance_mchc_draws <- variance_mchc_draws %>% 
   group_by(.variable) %>% 
-  median_hdi(.value, .width = c(.95, .8, .5)) %>%
+  median_hdi(.value, .width = c(.95, .89, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
 
-# merge dataframe with credibilty levels
-variance_mchc_draws <- merge(variance_mchc_draws, credibility, by.x = ".variable", by.y = ".variable")
+# assign credibility levels
+variance_mchc_draws <- credibility_coder(variance_mchc_draws)
+
+# turn into factor
+variance_mchc_draws$credible <- as.factor(variance_mchc_draws$credible)
 ```
 ```{r, echo=FALSE, fig.height=4,fig.width=6}
 p23 <- ggplot(variance_mchc_draws, aes(y = fct_rev(.variable), 
@@ -1351,14 +1442,17 @@ fig_1
 dev.off()
 ```
 
-Next, let's make a plot of the distribution of empirical slope and variance values, along with their respective median and 50% interquantile range:
+Next, let's make a plot of the distribution of empirical slope values, along with their median and 50% interquantile range:
 
 ```{r, warning=FALSE, message=FALSE}
-# load empirical slope data, manipulate for faceting
+# load empirical slope data, manipulate for visualization
 slopes_empirical <- read_csv("~/Dropbox/andean_range_limits/data/blood_slopes.csv")
 slopes_dist <- slopes_empirical %>% 
   select(slope_hb, slope_hct, slope_mchc) %>% 
   gather()
+
+# transform values to 1000m intervals
+slopes_dist$value <- slopes_dist$value*1000
 
 # calculate quantiles, add linetype legend
 slope_quants <- slopes_dist %>% 
@@ -1373,60 +1467,55 @@ slope_quants <- slope_quants %>%
   ))
 
 # plot, top row
-p37 <- ggplot(slopes_dist, aes(x=value)) + 
+p37a <- ggplot(slopes_dist[slopes_dist$key=="slope_hb",], aes(x=value)) + 
   theme_bw() +
   theme(panel.grid = element_blank(),
         strip.background = element_blank(),
         strip.text = element_blank(),
         axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
         panel.spacing.x = unit(4, "mm")) +
-  geom_density(fill="gray40", color="black", alpha=0.5) +
-  xlab("Slope") +
+  geom_histogram(bins=50, fill=NA, color="black") +
+  xlab("g/dL/1000 m") +
   ylab("Density") +
-  geom_vline(data=slope_quants, aes(xintercept=value, linetype=lt), color="red") +
-  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) +
-  facet_wrap(~key, scales="free")
+  geom_vline(data=slope_quants[slope_quants$key=="slope_hb",], aes(xintercept=value, linetype=lt), color="red") +
+  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) 
 
-# load empirical variance data, manipulate for faceting
-variances_empirical <- read_csv("~/Dropbox/andean_range_limits/data/blood_variances.csv")
-variances_dist <- variances_empirical %>% 
-  select(variance_hb, variance_hct, variance_mchc) %>% 
-  gather()
-
-# calculate quantiles, add linetype legend
-variance_quants <- variances_dist %>% 
-  group_by(key) %>% 
-  summarise(value = quantile(value, c(0.25, 0.5, 0.75)), 
-            q = c(0.25, 0.5, 0.75))
-variance_quants <- variance_quants %>% 
-  mutate(lt = case_when(
-    q == 0.25 ~ "dashed",
-    q == 0.5 ~ "solid",
-    q == 0.75 ~ "dashed"
-  ))
-
-# plot, top row
-p38 <- ggplot(variances_dist, aes(x=value)) + 
+p37b <- ggplot(slopes_dist[slopes_dist$key=="slope_hct",], aes(x=value)) + 
   theme_bw() +
   theme(panel.grid = element_blank(),
         strip.background = element_blank(),
         strip.text = element_blank(),
         axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
         panel.spacing.x = unit(4, "mm")) +
-  geom_density(fill="gray40", color="black", alpha=0.5) +
-  xlab("Variance") +
+  geom_histogram(bins=50, fill=NA, color="black") +
+  xlab("%/1000 m") +
   ylab("Density") +
-  xlim(0,0.25) +
-  geom_vline(data=variance_quants, aes(xintercept=value, linetype=lt), color="red") +
-  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) +
-  facet_wrap(~key, scales="free_y")
+  geom_vline(data=slope_quants[slope_quants$key=="slope_hct",], aes(xintercept=value, linetype=lt), color="red") +
+  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) 
+
+p37c <- ggplot(slopes_dist[slopes_dist$key=="slope_mchc",], aes(x=value)) + 
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.spacing.x = unit(4, "mm")) +
+  geom_histogram(bins=50, fill=NA, color="black") +
+  xlab("g/dL/1000 m") +
+  ylab("Density") +
+  geom_vline(data=slope_quants[slope_quants$key=="slope_mchc",], aes(xintercept=value, linetype=lt), color="red") +
+  scale_linetype_manual(values = c("dashed", "solid"), guide=FALSE) 
 
 # combine
-fig_2 <- plot_grid(p37, p38, nrow=2, ncol=1, labels=c("A","B"))
+
+p37 <- plot_grid(p37a, p37b, p37c, labels="AUTO", nrow=1)
 
 # export
-pdf("~/Dropbox/andean_range_limits/figures/figure_2.pdf", height = 5, width=9)
-fig_2
+pdf("~/Dropbox/andean_range_limits/figures/figure_2.pdf", height = 3, width=9)
+p37
 dev.off()
 ```
 
@@ -1434,7 +1523,6 @@ For the paper, let's note the median and IQR values:
 
 ```{r, message=FALSE, warning=FALSE}
 slope_quants
-variance_quants
 ```
 
 Next, let's plot confidence intervals for predictors for our full models:

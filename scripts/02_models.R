@@ -88,13 +88,13 @@ slope_hb_1 <-
   )
 
 # pp check
-pp_check(slope_hb_1, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_hb_1, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_hb_1)
+#plot(slope_hb_1)
 
 # pairwise plots
-pairs(slope_hb_1)
+#pairs(slope_hb_1)
 
 # fit full model without phylogeny
 slope_hb_2 <- 
@@ -117,13 +117,13 @@ slope_hb_2 <-
   )
 
 # pp check
-pp_check(slope_hb_2, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_hb_2, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_hb_2)
+#plot(slope_hb_2)
 
 # pairwise plots
-pairs(slope_hb_2)
+#pairs(slope_hb_2)
 
 # fit full model without phylogeny or interaction term
 slope_hb_3 <- 
@@ -145,13 +145,43 @@ slope_hb_3 <-
   )
 
 # pp check
-pp_check(slope_hb_3, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_hb_3, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_hb_3)
+#plot(slope_hb_3)
 
 # pairwise plots
-pairs(slope_hb_3)
+#pairs(slope_hb_3)
+
+# fit full model without interaction term
+slope_hb_4 <- 
+  brm(data = slope_df, family = student(),
+      slope_hb | se(error_hb, sigma=TRUE) ~ 1 + elev_range_s + 
+        median_elevation_s + mass_s + sampling_range_s + (1 | gr(phylo, cov=A)),
+      inits = inits_list,
+      data2 = list(A = A),
+      prior = c(
+        prior(normal(0, 2.5), "b", coef="elev_range_s"),
+        prior(normal(0, 2.5), "b", coef="median_elevation_s"),
+        prior(normal(0, 2.5), "b", coef="sampling_range_s"),
+        prior(normal(0, 2.5), "b", coef="mass_s"),
+        prior(normal(0, 10), "Intercept"),
+        prior(student_t(3, 0, 2), "sd"),
+        prior(cauchy(0, 2.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(slope_hb_4, nsamples = 50) + xlim(-10, 10)
+
+# trace and density plots
+#plot(slope_hb_4)
+
+# pairwise plots
+#pairs(slope_hb_4)
 
 # fit the null model with phylogeny alone
 slope_hb_0 <- 
@@ -169,16 +199,16 @@ slope_hb_0 <-
   )
 
 # pp check
-pp_check(slope_hb_0, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_hb_0, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_hb_0)
+#plot(slope_hb_0)
 
 # pairwise plots
-pairs(slope_hb_0)
+#pairs(slope_hb_0)
 
 # compare models
-loo_slope_hb <- loo(slope_hb_1, slope_hb_2, slope_hb_3, slope_hb_0)  # simple model best, then full, then null
+loo_slope_hb <- loo(slope_hb_1, slope_hb_2, slope_hb_3, slope_hb_4, slope_hb_0)  # simple model best, then full, then null
 
 # export counterfactual prediction for effect of elevational range
 range_seq <- tibble(elev_range_s = seq(from = -3, to = 3, by = 0.1),
@@ -291,13 +321,13 @@ slope_hct_1 <-
   )
 
 # pp check
-pp_check(slope_hct_1, nsamples = 50) + xlim(-15, 15)
+#pp_check(slope_hct_1, nsamples = 50) + xlim(-15, 15)
 
 # trace and density plots
-plot(slope_hct_1)
+#plot(slope_hct_1)
 
 # pairwise plots
-pairs(slope_hct_1)
+#pairs(slope_hct_1)
 
 # fit full model without phylogeny
 slope_hct_2 <- 
@@ -320,13 +350,13 @@ slope_hct_2 <-
   )
 
 # pp check
-pp_check(slope_hct_2, nsamples = 50) + xlim(-15, 15)
+#pp_check(slope_hct_2, nsamples = 50) + xlim(-15, 15)
 
 # trace and density plots
-plot(slope_hct_2)
+#plot(slope_hct_2)
 
 # pairwise plots
-pairs(slope_hct_2)
+#pairs(slope_hct_2)
 
 # fit full model without phylogeny or interaction term
 slope_hct_3 <- 
@@ -348,13 +378,43 @@ slope_hct_3 <-
   )
 
 # pp check
-pp_check(slope_hct_3, nsamples = 50) + xlim(-15, 15)
+#pp_check(slope_hct_3, nsamples = 50) + xlim(-15, 15)
 
 # trace and density plots
-plot(slope_hct_3)
+#plot(slope_hct_3)
 
 # pairwise plots
-pairs(slope_hct_3)
+#pairs(slope_hct_3)
+
+# fit full model without interaction term
+slope_hct_4 <- 
+  brm(data = slope_df, family = student(),
+      slope_hct | se(error_hct, sigma=TRUE) ~ 1 + elev_range_s + 
+        median_elevation_s + mass_s + sampling_range_s + (1 | gr(phylo, cov=A)),
+      inits = inits_list,
+      data2 = list(A = A),
+      prior = c(
+        prior(normal(0, 2.5), "b", coef="elev_range_s"),
+        prior(normal(0, 2.5), "b", coef="median_elevation_s"),
+        prior(normal(0, 2.5), "b", coef="sampling_range_s"),
+        prior(normal(0, 2.5), "b", coef="mass_s"),
+        prior(normal(0, 10), "Intercept"),
+        prior(student_t(3, 0, 2), "sd"),
+        prior(cauchy(0, 2.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(slope_hct_4, nsamples = 50) + xlim(-10, 10)
+
+# trace and density plots
+#plot(slope_hct_4)
+
+# pairwise plots
+#pairs(slope_hct_4)
 
 # fit the null model with phylogeny alone
 slope_hct_0 <- 
@@ -372,16 +432,16 @@ slope_hct_0 <-
   )
 
 # pp check
-pp_check(slope_hct_0, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_hct_0, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_hct_0)
+#plot(slope_hct_0)
 
 # pairwise plots
-pairs(slope_hct_0)
+#pairs(slope_hct_0)
 
 # compare models
-loo_slope_hct <- loo(slope_hct_1, slope_hct_2, slope_hct_3, slope_hct_0)  # simple model best, then full, then null
+loo_slope_hct <- loo(slope_hct_1, slope_hct_2, slope_hct_3, slope_hct_4, slope_hct_0)  # simple model best, then full, then null
 
 # export draws from sampled posterior
 slope_hct_1 %>%
@@ -421,13 +481,13 @@ slope_mchc_1 <-
   )
 
 # pp check
-pp_check(slope_mchc_1, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_mchc_1, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_mchc_1)
+#plot(slope_mchc_1)
 
 # pairwise plots
-pairs(slope_mchc_1)
+#pairs(slope_mchc_1)
 
 # fit full model without phylogeny
 slope_mchc_2 <- 
@@ -450,13 +510,13 @@ slope_mchc_2 <-
   )
 
 # pp check
-pp_check(slope_mchc_2, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_mchc_2, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_mchc_2)
+#plot(slope_mchc_2)
 
 # pairwise plots
-pairs(slope_mchc_2)
+#pairs(slope_mchc_2)
 
 # fit full model without phylogeny or interaction term
 slope_mchc_3 <- 
@@ -478,13 +538,44 @@ slope_mchc_3 <-
   )
 
 # pp check
-pp_check(slope_mchc_3, nsamples = 50) + xlim(-10, 10)
+#pp_check(slope_mchc_3, nsamples = 50) + xlim(-10, 10)
 
 # trace and density plots
-plot(slope_mchc_3)
+#plot(slope_mchc_3)
 
 # pairwise plots
-pairs(slope_mchc_3)
+#pairs(slope_mchc_3)
+
+# fit full model without interaction term
+slope_mchc_4 <- 
+  brm(data = slope_df, family = student(),
+      slope_mchc | se(error_mchc, sigma=TRUE) ~ 1 + elev_range_s + 
+        median_elevation_s + mass_s + sampling_range_s + (1 | gr(phylo, cov=A)),
+      inits = inits_list,
+      data2 = list(A = A),
+      prior = c(
+        prior(normal(0, 2.5), "b", coef="elev_range_s"),
+        prior(normal(0, 2.5), "b", coef="median_elevation_s"),
+        prior(normal(0, 2.5), "b", coef="sampling_range_s"),
+        prior(normal(0, 2.5), "b", coef="mass_s"),
+        prior(normal(0, 10), "Intercept"),
+        prior(student_t(3, 0, 2), "sd"),
+        prior(cauchy(0, 2.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(slope_mchc_4, nsamples = 50) + xlim(-10, 10)
+
+# trace and density plots
+#plot(slope_mchc_4)
+
+# pairwise plots
+#pairs(slope_mchc_4)
+
 
 # fit the null model with phylogeny alone
 slope_mchc_0 <- 
@@ -502,7 +593,7 @@ slope_mchc_0 <-
   )
 
 # compare models
-loo_slope_mchc <- loo(slope_mchc_1, slope_mchc_2, slope_mchc_3, slope_mchc_0)  # simple model best, then full, then null
+loo_slope_mchc <- loo(slope_mchc_1, slope_mchc_2, slope_mchc_3, slope_mchc_4, slope_mchc_0)  # simple model best, then full, then null
 
 # export draws from sampled posterior
 slope_mchc_1 %>%
@@ -553,6 +644,7 @@ variance_hb_1 <-
       prior = c(
         prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
         prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s:edge_distance_s"),
         prior(normal(0, 10), "Intercept"),
         prior(student_t(3, 0, 2), "sd"),
         prior(cauchy(0, 2.5), "sigma")),
@@ -563,13 +655,13 @@ variance_hb_1 <-
   )
 
 # pp check
-pp_check(variance_hb_1, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hb_1, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hb_1)
+#plot(variance_hb_1)
 
 # pairwise plots
-pairs(variance_hb_1)
+#pairs(variance_hb_1)
 
 # fit full model without phylogeny
 variance_hb_2 <- 
@@ -579,6 +671,7 @@ variance_hb_2 <-
       prior = c(
         prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
         prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s:edge_distance_s"),
         prior(normal(0, 10), "Intercept"),
         prior(cauchy(0, 2.5), "sigma")),
       iter = 10000, warmup = 5000, cores = 2, chains = 2,
@@ -588,13 +681,13 @@ variance_hb_2 <-
   )
 
 # pp check
-pp_check(variance_hb_2, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hb_2, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hb_2)
+#plot(variance_hb_2)
 
 # pairwise plots
-pairs(variance_hb_2)
+#pairs(variance_hb_2)
 
 # fit full model without phylogeny or interaction term
 variance_hb_3 <- 
@@ -613,13 +706,40 @@ variance_hb_3 <-
   )
 
 # pp check
-pp_check(variance_hb_3, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hb_3, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hb_3)
+#plot(variance_hb_3)
 
 # pairwise plots
-pairs(variance_hb_3)
+#pairs(variance_hb_3)
+
+# fit full model without interaction term
+variance_hb_4 <- 
+  brm(data = variance_df, family = lognormal(),
+      variance_hb ~ 1 + bin_elevation_s + edge_distance_s + (1 | gr(phylo, cov=A)),
+      data2 = list(A = A),
+      inits = inits_list,
+      prior = c(
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
+        prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 10), "Intercept"),
+        prior(student_t(3, 0, 2), "sd"),
+        prior(cauchy(0, 2.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(variance_hb_4, nsamples = 50) + xlim(0, 5)
+
+# trace and density plots
+#plot(variance_hb_4)
+
+# pairwise plots
+#pairs(variance_hb_4)
 
 # fit the null model with phylogeny alone
 variance_hb_0 <- 
@@ -637,7 +757,7 @@ variance_hb_0 <-
   )
 
 # compare models
-loo_variance_hb <- loo(variance_hb_1, variance_hb_2, variance_hb_3, variance_hb_0) 
+loo_variance_hb <- loo(variance_hb_1, variance_hb_2, variance_hb_3, variance_hb_4, variance_hb_0) 
 
 # export counterfactual prediction for effect of elevational range
 bin_seq <- tibble(bin_elevation_s = seq(from = -3, to = 3, by = 0.1),
@@ -723,6 +843,7 @@ variance_hct_1 <-
       prior = c(
         prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
         prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s:edge_distance_s"),
         prior(normal(0, 10), "Intercept"),
         prior(student_t(3, 0, 2), "sd"),
         prior(cauchy(0, 2.5), "sigma")),
@@ -733,13 +854,13 @@ variance_hct_1 <-
   )
 
 # pp check
-pp_check(variance_hct_1, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hct_1, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hct_1)
+#plot(variance_hct_1)
 
 # pairwise plots
-pairs(variance_hct_1)
+#pairs(variance_hct_1)
 
 # fit full model without phylogeny
 variance_hct_2 <- 
@@ -749,6 +870,7 @@ variance_hct_2 <-
       prior = c(
         prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
         prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s:edge_distance_s"),
         prior(normal(0, 10), "Intercept"),
         prior(cauchy(0, 2.5), "sigma")),
       iter = 10000, warmup = 5000, cores = 2, chains = 2,
@@ -758,13 +880,13 @@ variance_hct_2 <-
   )
 
 # pp check
-pp_check(variance_hct_2, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hct_2, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hct_2)
+#plot(variance_hct_2)
 
 # pairwise plots
-pairs(variance_hct_2)
+#pairs(variance_hct_2)
 
 # fit full model without phylogeny or interaction term
 variance_hct_3 <- 
@@ -783,13 +905,40 @@ variance_hct_3 <-
   )
 
 # pp check
-pp_check(variance_hct_3, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hct_3, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hct_3)
+#plot(variance_hct_3)
 
 # pairwise plots
-pairs(variance_hct_3)
+#pairs(variance_hct_3)
+
+# fit full model without interaction term
+variance_hct_4 <- 
+  brm(data = variance_df, family = lognormal(),
+      variance_hct ~ 1 + bin_elevation_s + edge_distance_s + (1 | gr(phylo, cov=A)),
+      data2 = list(A = A),
+      inits = inits_list,
+      prior = c(
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
+        prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 10), "Intercept"),
+        prior(student_t(3, 0, 2), "sd"),
+        prior(cauchy(0, 2.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(variance_hct_4, nsamples = 50) + xlim(0, 5)
+
+# trace and density plots
+#plot(variance_hct_4)
+
+# pairwise plots
+#pairs(variance_hct_4)
 
 # fit the null model with phylogeny alone
 variance_hct_0 <- 
@@ -807,16 +956,16 @@ variance_hct_0 <-
   )
 
 # pp check
-pp_check(variance_hct_0, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_hct_0, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_hct_0)
+#plot(variance_hct_0)
 
 # pairwise plots
-pairs(variance_hct_0)
+#pairs(variance_hct_0)
 
 # compare models
-loo_variance_hct <- loo(variance_hct_1, variance_hct_2, variance_hct_3, variance_hct_0) 
+loo_variance_hct <- loo(variance_hct_1, variance_hct_2, variance_hct_3, variance_hct_4, variance_hct_0) 
 
 # export counterfactual prediction for effect of elevational range
 bin_seq <- tibble(bin_elevation_s = seq(from = -3, to = 3, by = 0.1),
@@ -902,6 +1051,7 @@ variance_mchc_1 <-
       prior = c(
         prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
         prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s:edge_distance_s"),
         prior(normal(0, 10), "Intercept"),
         prior(student_t(3, 0, 2), "sd"),
         prior(cauchy(0, 2.5), "sigma")),
@@ -912,13 +1062,13 @@ variance_mchc_1 <-
   )
 
 # pp check
-pp_check(variance_mchc_1, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_mchc_1, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_mchc_1)
+#plot(variance_mchc_1)
 
 # pairwise plots
-pairs(variance_mchc_1)
+#pairs(variance_mchc_1)
 
 # fit full model without phylogeny
 variance_mchc_2 <- 
@@ -928,6 +1078,7 @@ variance_mchc_2 <-
       prior = c(
         prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
         prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s:edge_distance_s"),
         prior(normal(0, 10), "Intercept"),
         prior(cauchy(0, 2.5), "sigma")),
       iter = 10000, warmup = 5000, cores = 2, chains = 2,
@@ -937,13 +1088,13 @@ variance_mchc_2 <-
   )
 
 # pp check
-pp_check(variance_mchc_2, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_mchc_2, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_mchc_2)
+#plot(variance_mchc_2)
 
 # pairwise plots
-pairs(variance_mchc_2)
+#pairs(variance_mchc_2)
 
 # fit full model without phylogeny or interaction term
 variance_mchc_3 <- 
@@ -962,13 +1113,40 @@ variance_mchc_3 <-
   )
 
 # pp check
-pp_check(variance_mchc_3, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_mchc_3, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_mchc_3)
+#plot(variance_mchc_3)
 
 # pairwise plots
-pairs(variance_mchc_3)
+#pairs(variance_mchc_3)
+
+# fit full model without interaction term
+variance_mchc_4 <- 
+  brm(data = variance_df, family = lognormal(),
+      variance_mchc ~ 1 + bin_elevation_s + edge_distance_s + (1 | gr(phylo, cov=A)),
+      data2 = list(A = A),
+      inits = inits_list,
+      prior = c(
+        prior(normal(0, 2.5), "b", coef="bin_elevation_s"),
+        prior(normal(0, 2.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 10), "Intercept"),
+        prior(student_t(3, 0, 2), "sd"),
+        prior(cauchy(0, 2.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(variance_mchc_4, nsamples = 50) + xlim(0, 5)
+
+# trace and density plots
+#plot(variance_mchc_4)
+
+# pairwise plots
+#pairs(variance_mchc_4)
 
 # fit the null model with phylogeny alone
 variance_mchc_0 <- 
@@ -986,16 +1164,16 @@ variance_mchc_0 <-
   )
 
 # pp check
-pp_check(variance_mchc_0, nsamples = 50) + xlim(0, 5)
+#pp_check(variance_mchc_0, nsamples = 50) + xlim(0, 5)
 
 # trace and density plots
-plot(variance_mchc_0)
+#plot(variance_mchc_0)
 
 # pairwise plots
-pairs(variance_mchc_0)
+#pairs(variance_mchc_0)
 
 # compare models
-loo_variance_mchc <- loo(variance_mchc_1, variance_mchc_2, variance_mchc_3, variance_mchc_0) 
+loo_variance_mchc <- loo(variance_mchc_1, variance_mchc_2, variance_mchc_3, variance_mchc_4, variance_mchc_0) 
 
 # export draws from sampled posterior
 variance_mchc_1 %>%

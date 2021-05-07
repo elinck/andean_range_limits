@@ -1,6 +1,18 @@
 # Blood phenotype plasticity & variance in Andean birds
 
-scripts for evolution of elevational range limit project   
+scripts for blood plasticity and elevational range project   
+
+in `data/` subdirectory:    
+
+`birds_mcc.tre`: maximum clade credibility tree for phylogenetic mixed effect models  
+
+`blood_data.csv`: raw data  
+
+`stotz_elevation_data.csv`: elevational range data for peruvian birds   
+
+`stotz_elevation_data_rev.csv`: elevational range data for peruvian birds w/ taxonomic revisions  
+
+`total_blood_data_contributsion.csv`: collector contributions to project  
 
 in `figures/` subdirectory:   
 
@@ -27,4 +39,9 @@ in `scripts/` subdirectory:
 `01_blood_data_exploration.md`: markdown document from prelim analyses  
 
 `02_models.R`: script for `brms` model fitting and output export
+
+`03_collector_contributions.Rmd`: Rmarkdown document for analyzing collector contributions
+
+`03_collector_contributions.pdf`: pdf output from analyzing collector contributions 
+
 

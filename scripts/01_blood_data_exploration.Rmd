@@ -1539,7 +1539,7 @@ variance_mchc_draws$variable <- "mchc_variance"
 # functions to transform values back to "real" effect sizes
 scale_hb <- function(x)(x / 1e3)
 scale_hct <- function(x)(x / 1e5)
-scale_mchc <- function(x)(x / 1e1)
+scale_mchc <- function(x)(x / 1e3)
 
 # backtransform tibbles
 slope_hb_draws <- slope_hb_draws %>% 

@@ -34,11 +34,13 @@ in `scripts/` subdirectory:
 
 `00_functions.R`: custom functions for analyses   
 
+`01_data_paper_processing.Rmd`: Rmarkdown document to collate and clean different raw blood data files  
+
+`01_data_paper_processing.pdf`: pdf output from the above  
+
 `02_blood_data_exploration.Rmd`: Rmarkdown document with analyses for Linck et al. *in prep*  
 
 `02_blood_data_exploration.pdf`: pdf output from the above  
-
-`02_blood_data_exploration.md`: markdown version of the above  
 
 `03_models.R`: script for `brms` model fitting and output export  
  
@@ -49,5 +51,3 @@ in `scripts/` subdirectory:
 `05_aos_presentation.Rmd`: beamer / Rmarkdown presentation for 2021 AOS lightning talk about this work  
 
 `05_aos_preesentation.pdf`: pdf version off the above  
-
-

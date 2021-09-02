@@ -1,0 +1,259 @@
+---
+title: "Respiratory plasticity and elevational range breadth in Andean birds" 
+author: Ethan B. Linck, Jessie L. Williamson, Emil Bautista, Elizabeth J. Beckman, Phred M. Benham, Shane G. DuBay, L. Monica Flores, Chauncey R. Gadek, Andrew B. Johnson, Matthew R. Jones, Jano Núñez-Zapata, Alessandra Quiñonez, C. Jonathan Schmitt, Dora Susanibar, Jorge Tiravanti C., Karen Verde-Guerra, Natalie A. Wright, Thomas Valqui, Jay F. Storz, and Christopher C. Witt
+date: |
+  | University of New Mexico 
+  | Department of Biology & Museum of Southwestern Biology
+header-includes:
+- \addtobeamertemplate{title page}{\centering \includegraphics[width=8cm]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/aos_title.png}}{}
+output: beamer_presentation
+fontsize: 9pt
+---
+
+# Does physiology limit elevational ranges?
+
+## Blood $O_{2}$-carrying capacity and elevational specialization
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=4, fig.width=7}
+# libraries
+library(ggplot2)
+library(cowplot)
+library(tidyverse, quietly = TRUE)
+
+# load functions script
+source("~/Dropbox/andean_range_limits/scripts/00_functions.R")
+
+# calculate water vapor pressure based on temperature and humidity
+wvp <- water_vapor_pressure(temp_celsius = 15, humidity = 20)
+
+# assign coefficients for formulae
+sea_level_pressure <- 760 # in mmHg
+mass <- 0.0289644 # molar mass of gas in kg/mol
+gravity <- 9.81 # acceleration due to gravity in m/s2
+gas_constant <- 8.3145 #J/molK
+temp_kelvin <- 15 + 273.15 # assuming 15C here
+mbar_conversion <- 1.33322 # convert mmHg to mbar
+o2 <- 0.2095 # proportion o2 in atmosphere
+max_o2 <- ((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*0)*mbar_conversion)-wvp)*o2
+
+# barometric formula
+p <- function(x) sea_level_pressure *exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion
+o <- function(x) ((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion)-wvp)*o2
+po2 <-function(x) (((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion)-wvp)*o2/max_o2)*100
+
+p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+  theme_bw() +
+  stat_function(fun = po2) +
+  scale_linetype_discrete(guide=FALSE) +
+  theme(panel.grid = element_blank()) +
+  xlim(0,9500) +
+  ylim(0,100) +
+  geom_vline(xintercept = 1619, size=3, alpha=0.3) +
+  geom_text(aes(x=1319, label="Albuquerque, NM: 82%", y=20), angle=90, size=3) +
+  geom_vline(xintercept = 3982, size=3, alpha=0.2) +
+  geom_text(aes(x=3682, label="Mt. Wheeler, NM: 62%", y=20), angle=90, size=3) +
+  geom_vline(xintercept = 6768, size=3, alpha=0.1) +
+  geom_text(aes(x=6468, label="Huascarán, Peru: 44%", y=20), angle=90, size=3) +
+  geom_text(aes(x=7300, label="15°C, 20% humidity", y=100,), size=3) +
+  xlab("Elevation (m)") +
+  ylab(expression(paste("% sea level ", PO[2]))) +
+  labs(linetype=element_blank()) +
+  theme(legend.position = c(0.8, 0.9))
+
+# load stotz data
+stotz <- read.csv("~/Dropbox/andean_range_limits/data/stotz_elevation_data.csv")
+stotz <- cbind.data.frame(stotz$GENUS, stotz$SPECIES, 
+                          stotz$MIN, stotz$MAX, stotz$MIDPT.ELEV)
+colnames(stotz) <- c("genus","species","elev_min","elev_max","elev_midpt")
+stotz$elev_range <- stotz$elev_max - stotz$elev_min
+stotz_mod <- stotz[stotz$elev_range>0,]
+
+ranges <- ggplot(stotz_mod, aes(x=elev_range)) +
+  geom_histogram(binwidth = 100, color="black",fill="gray70") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.title = element_text(size=15)) +
+  xlab("elevational range breadth")  +
+  geom_vline(xintercept = median(stotz$elev_range, na.rm=TRUE),
+             linetype="dashed",size=1.5, color="red")
+
+o2_ranges <- plot_grid(p2, ranges, nrow=1)
+o2_ranges
+```
+
+## Respiratory plasticity
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(cowplot)
+
+# read in hb data, subset
+blood_df <- read.csv("~/Dropbox/andean_range_limits/data/filtered_hb_dataset.csv")
+cyan <- filter(blood_df, species=="Diglossa cyanea")
+brun <- filter(blood_df, species=="Diglossa brunneiventris")
+
+# make plot
+cyan_plasticity <- ggplot(cyan, aes(x=elevation, y=hb)) +
+ geom_point(pch=21,stroke=1,color="black",show.legend = FALSE) +
+ geom_smooth(method="lm",se=FALSE,linetype="dashed",color="red") +
+ theme_bw() +
+ theme(panel.grid = element_blank(),
+       strip.background = element_blank(),
+       plot.title = element_text(color = "red"),
+       axis.title = element_text(size=15)) +
+ xlab("Elevation")+
+ xlim(1000, 4500) + 
+ ylim(11, 25) + 
+ ylab("[Hb]") +
+ ggtitle("shallower slope, less plastic")
+
+brun_plasticity <- ggplot(brun, aes(x=elevation, y=hb)) +
+ geom_point(pch=21,stroke=1,color="black",show.legend = FALSE) +
+ geom_smooth(method="lm",se=FALSE,linetype="dashed",color="red") +
+ theme_bw() +
+ theme(panel.grid = element_blank(),
+       strip.background = element_blank(),
+       plot.title = element_text(color = "red"),
+       axis.title = element_text(size=15)) +
+ xlab("Elevation")+
+ xlim(1000, 4500) +
+ ylim(11, 25) + 
+ ylab("[Hb]") +
+ ggtitle("steeper slope, more plastic")
+
+plasticity <- plot_grid(cyan_plasticity, brun_plasticity, nrow=1)
+```
+```{r, fig.height=4, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+plasticity
+```
+ 
+## $H_{1}$: Respiratory plasticity constrains range breadth
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(ggplot2)
+library(cowplot)
+
+fun.1 <- function(x) 3*x + 2
+fun.2 <- function(x) -3*x + 2
+fun.3 <- function(x) 2
+
+p1 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+ stat_function(fun = fun.1, linetype="dashed", color="black", size=1) +
+#stat_function(fun = fun.1, color="black", size=20, alpha=0.2) +
+ xlim(1,10) +
+ theme_classic() +
+ theme(axis.text = element_blank(),
+       axis.ticks = element_blank(),
+       axis.title = element_text(size=10)) +
+ xlab("Elevational Range Breadth") +
+ ylab("Respiratory Plasticity") 
+#ggtitle("H1: Plasticity facilitates niche breadth \nGeneralists have greater respiratory plasticity \n")
+
+p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+  stat_function(fun = fun.2, linetype="dashed", color="black", size=1) +
+  #stat_function(fun = fun.2, color="black", size=20, alpha=0.2) +
+  xlim(0,10) +
+  theme_classic() +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_text(size=10)) +
+  xlab("Elevational Range Breadth") +
+  ylab("Respiratory Plasticity") 
+  #ggtitle("H2: Plasticity constrains nichee breadth \nSpecialists have greater respiratory plasticity \n")
+
+top <- plot_grid(p1, p2, nrow=1)
+```
+```{r, echo=FALSE, fig.height=2.5, fig.width=2.5, fig.align='center'}
+p2
+```
+## Methods
+
+- **[Hb]** from 2367 individuals of 137 species
+- Bayesian multivariate linear models  
+  
+  
+  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=7}
+library(mapdata)
+
+coast_map <- fortify(map("worldHires", fill=TRUE, plot=FALSE))
+p4 <- ggplot() + coord_map() +
+  theme_bw() +
+  #theme(axis.title.x=element_blank(),
+  #      axis.title.y=element_blank()) +
+  #geom_map(data=coast_map, map=coast_map, aes(x=long, y=lat, map_id=region), 
+  #         fill="white", color="black") +
+  geom_map(data=data.frame(region="Peru"), map=coast_map,
+                    aes(map_id=region), fill="gray100", col="gray0") + 
+  xlim(-82,-68) + 
+  xlab("latitude") +
+  ylab("longitude") +
+  ylim(-19,0.5) +
+  #geom_point(data=df,aes(x=long, y=lat,fill=elev), colour="black",pch=21,alpha=0.3,size = 0.5) + 
+  #scale_fill_gradient(low = "white", high = "black") +
+  #xlab("longitude") +
+  #ylab("latitude") +
+  stat_bin2d(data=blood_df, aes(x=long, y=lat,fill = ..count..), color="black", binwidth = c(0.5,0.5)) +
+  scale_fill_gradient(low = "white", high = "black") #name = element_blank())
+
+p5 <- ggplot(blood_df, aes(x=elevation)) + geom_histogram(binwidth = 100, color="black",fill="gray70") +
+  theme_bw() +
+  theme(axis.title.y = element_blank()) +
+  xlab("elevation (m)")
+
+plot_grid(p4, p5)
+```
+
+## Elevational generalists have greater respiratory plasticity
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidybayes)
+library(tidyverse)
+
+source("~/Dropbox/andean_range_limits/scripts/00_functions.R")
+
+# load draws and evaluate levels of support for different variables with function
+slope_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_hb_draws_interaction.csv") 
+
+# calculate width for point interval probabilities
+slope_hb_draws <- slope_hb_draws %>% 
+group_by(.variable) %>% 
+median_hdi(.value, .width = c(.95, .80, .5)) %>%
+group_by(.variable) %>% 
+mutate(condition_mean = mean(.value)) 
+
+# assign credibility levels
+
+# assign credibility levels
+slope_hb_draws <- credibility_coder(slope_hb_draws)
+
+# turn into factor
+slope_hb_draws$credible <- as.factor(slope_hb_draws$credible)
+```
+```{r, echo=FALSE, fig.height=4,fig.width=6}
+p17 <- ggplot(slope_hb_draws, aes(y = fct_rev(.variable), 
+            x=condition_mean, 
+            xmin = .lower, 
+            xmax = .upper,
+            size = -.width)) +
+ geom_pointinterval(aes(color=credible)) +
+ geom_vline(xintercept = 0, linetype="dashed") +
+ scale_color_manual(values = c("black","darkred","darksalmon"),
+                   name="Credible Interval",
+                   breaks=c(0,1,2),
+                   labels=c("NA", "95%","80%")) +  
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        axis.title = element_text(size=15)) +
+  xlab(expression(paste(Beta,"*",10^{3}))) +
+  ylab(element_blank()) + 
+  scale_y_discrete(breaks=c("b_elev_range_s","b_median_elevation_s","b_sampling_range_s","b_mass_s", "b_elev_range_s:median_elevation_s"),
+                   labels=c("Elev. Range","Range Elev.", "Sampling Range","Mass", "Elev. Range * Range Elev.")) +
+  ggtitle("[Hb] Plasticity")
+
+p17
+```
+
+# We conclude: respiratory plasticity may facilitate elevational range expansion—even if broad elevational ranges aren't stable in the long term (Gadek et al. 2017)

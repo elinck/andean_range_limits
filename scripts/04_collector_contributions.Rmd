@@ -1,0 +1,48 @@
+---
+title: "Preparator and catalog owner contributions"
+author: "Ethan Linck"
+date: "4/22/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Building off Jessie's approach, let's sum preparator and catalog owner contributions to the "full" (multitaxa) blood dataset.
+
+We start by loading libraries, set our working directory, and read in the data:
+```{r, message=FALSE}
+library(tidyverse, quietly = TRUE)
+setwd("~/Dropbox/andean_range_limits/data/")
+full <- read.csv("blood_data.csv")
+```
+
+Next, we'll count up the total number specimens each contributor has assigned to their name as 1) catalog owner and 2) preparator:
+
+```{r}
+cat.num.count <- full %>% group_by(`Cat.owner`) %>% summarise(count = length(`Cat.owner`))
+prep.num.count <- full %>% group_by(`Preparator`) %>% summarise(count = length(`Preparator`))
+```
+
+We'll sort this in descending order, and merge dataframes so each row totals catalog specimens and prepared specimens for a single person:
+
+```{r}
+cat.num.count <- cat.num.count %>% arrange(desc(count)) 
+prep.num.count <- prep.num.count %>% arrange(desc(count)) 
+colnames(cat.num.count) <- c("name", "catalog_specimen_count")
+colnames(prep.num.count) <- c("name", "prepared_specimen_count")
+export <- inner_join(cat.num.count, prep.num.count, by = "name")
+```
+
+What does this file look like?
+
+```{r}
+head(export)
+```
+
+Last, we'll write it out as a .csv file for Chris: 
+
+```{r}
+write.csv(export, "~/Dropbox/andean_range_limits/data/total_blood_data_contributions.csv")
+```

@@ -180,7 +180,7 @@ credibility_coder <- function(dataframe){
     sub <- dataframe[dataframe$.variable==i,]
     sub <- sub %>% mutate(levels = case_when(
       .lower < 0 & .upper < 0 & .width==0.95 | .lower > 0 & .upper > 0 & .width==0.95  ~ 1,
-      .lower < 0 & .upper < 0 & .width==0.89 | .lower > 0 & .upper > 0 & .width==0.89  ~ 2, 
+      .lower < 0 & .upper < 0 & .width==0.80 | .lower > 0 & .upper > 0 & .width==0.80  ~ 2, 
       .lower < 0 & .upper > 0 | .lower > 0 & .upper < 0 ~ 0,
       .width==0.5 ~ 0
     ))

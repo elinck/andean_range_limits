@@ -1,0 +1,266 @@
+---
+title: "Data paper dataset processing"
+author: "Museum of Southwestern Biology, University of New Mexico"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This notebook documents simple manipulations of source files to prepare the master boood trait dataset for release and publication. 
+
+First, let's load tidyverse:
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse, quietly = TRUE)
+```
+
+Next, we'll load the three component .csv files: the single data file for Linck et al. *in prep*, and the two data files for Williamson et al. *in prep*.
+
+```{r, message=FALSE, warning=FALSE}
+linck <- read_csv("~/Dropbox/andean_range_limits/data/blood_data.csv")
+will_1 <- read_csv("~/Dropbox/andean_range_limits/data/hummingbird_spp_blood_raw.csv")
+will_2 <- read_csv("~/Dropbox/andean_range_limits/data/patagona_blood_raw.csv")
+```
+
+Now, we'll manually select the columns from each of these, starting with the Linck et al. dataset.  
+
+```{r, message=FALSE, warning=FALSE}
+colnames_linck <- c("NK", "MSB_Cat_NUM", "Order", "Family", "Scientific name", 
+                    "Sex", "mass at death","Mass at capture",
+                    "Mass for analyses","DAY","MONTH","YEAR",
+                    "Elevation","LatDecDegS","LongDecDegW",
+                    "Latitude  degrees S","Latitude minutes",	
+                    "Longitude degrees W",	"Longitude minutes",
+                    "tHb", "tHbcorr", "Uno-corr-factor", 
+                    "Uno-corr-fact2","Hct-column-after", "Hct-top",
+                    "Hct-bottom","Hct-middle-calculated","Hct-ratio",
+                    "2ndHct-column","2ndHct-top",
+                    "2ndHct-bottom","2ndHct-middle-calculated",
+                    "2ndHct-ratio","wtAVG-Hct",
+                    "HctBestEstimate","Blood_Notes")
+linck <- linck[, names(linck) %in% colnames_linck]
+```
+
+I've included more columns than we'll use for the final dataset because we want to make that the "best" estimates for mass, hemoglobin and hematocrit haven't been left blank unnecessarily. We'll take care of that now—note that the `coalesce()` function selects a value for its given column (e.g., `hb_final`) from the columns provided to its arguments, *in that order*. For example: the new column `mass_final` draws on data in `Mass for analyses` first, but if left blank, will next look to `Mass at capture` and then lastly `mass at death`. 
+
+```{r, message=FALSE, warning=FALSE}
+linck$`mass at death` <- is.numeric(linck$`mass at death`)
+linck$`2ndHct-ratio` <- is.numeric(linck$`2ndHct-ratio`)
+linck <- linck %>% mutate(mass_final = 
+                            coalesce(`Mass for analyses`, `Mass at capture`,
+                                     `mass at death`))
+linck <- linck %>% mutate(hct_final = 
+                            coalesce(`HctBestEstimate`,`wtAVG-Hct`,
+                                     `2ndHct-ratio`))
+linck <- linck %>% mutate(hb_final = 
+                            coalesce(tHb, tHbcorr))
+```
+
+Next, let's convert latitude and longitude from minutes to decimal degrees, and use `coalesce()` again to make sure we don't leave anything blank:
+
+```{r, message=FALSE, warning=FALSE}
+linck <- linck %>% mutate(lat_dec_deg = -((linck$`Latitude  degrees S`) + 
+                                            (linck$`Latitude minutes`/60)))
+linck <- linck %>% mutate(long_dec_deg = -((linck$`Longitude degrees W`) + 
+                                             (linck$`Longitude minutes`/60)))
+linck <- linck %>% mutate(lat_fin = coalesce(lat_dec_deg, `LatDecDegS`))
+linck <- linck %>% mutate(long_fin = coalesce(long_dec_deg, `LongDecDegW`))
+```
+
+Let's drop columns we no longer need, add a dummy column for RBC (missing in my dataset), and standardize column names: 
+
+```{r, message=FALSE, warning=FALSE}
+colnames_drop <- c("mass at death","Mass at capture","Mass for analyses",
+                   "LatDecDegS","LongDecDegW","Latitude  degrees S","Latitude minutes",	
+                   "Longitude degrees W",	"Longitude minutes","tHb", "tHbcorr",
+                   "Uno-corr-factor", "Uno-corr-fact2",
+                   "Hct-column-after","Hct-top", "Hct-bottom",
+                   "Hct-middle-calculated","Hct-ratio","2ndHct-column",
+                   "2ndHct-top","2ndHct-bottom",
+                   "2ndHct-middle-calculated","2ndHct-ratio","wtAVG-Hct",
+                   "HctBestEstimate", "lat_dec_deg",
+                   "long_dec_deg")
+linck <- linck[, !names(linck) %in% colnames_drop]
+linck$rbc <- NA
+colnames(linck) <- c("nk","msb_cat_no","sex","order","family","species","day",
+                     "month","year","elevation",
+                     "notes","mass","hct","hb","lat","long", "rbc")
+```
+
+Lastly, we'll scan the "Notes" field and exclude any observation with common phrases that indicate problematic data:
+
+```{r, message=FALSE, warning=FALSE}
+patterns <- c("unusable","discrepancy","died","poor.*", "broken", "problem.*", 
+              "clot.*", "death", "failed", "bubble",
+              "bad", "stressed", "switched", "not so good", "inferred", "did not", 
+              "didn't", "no dilution", "leaked", 
+              "unspun", "wouldn't", "unspun", "insufficient", "no blood")
+linck_final <- filter(linck, !grepl(paste(patterns, collapse="|"), notes, ignore.case=TRUE))
+```
+
+How many records did this drop?
+
+```{r, message=FALSE, warning=FALSE}
+nrow(linck) - nrow(linck_final) 
+```
+
+How many records and species remain?
+
+```{r, message=FALSE, warning=FALSE}
+nrow(linck_final) # number of records
+linck_final$species %>% unique() %>% length() # number of species
+```
+
+Next, let's process the other two hummingbird-specific datasets the same way. First, we subset columns for the full hummingbird data...
+
+```{r, message=FALSE, warning=FALSE}
+colnames_will_1 <- c("nk", "msb_cat_no", "order", "family", "species", 
+                     "sex", "mass_at_death",
+                    "mass_at_capture","mass_for_analyses","day","month",
+                    "year","elev","lat_dec_deg_S",
+                    "lon_dec_deg_W","lat_degrees_S","lat_mins","lon_degrees_W",
+                    "lon_mins","hb", "hb_corr",
+                    "uno_corr_factor", "uno_corr_factor2",
+                    "Hct-column-after","hct1_column",        
+                    "hct1_top","hct1_bottom","0_hct1_middle_calculated",
+                    "0_hct1_ratio","hct2_column",
+                    "hct2_top","hct2_bottom","0_hct2_middle_calculated",
+                    "0_hct2_ratio","0_wtAVG_hct",
+                    "hct_best","blood_notes","RBCx10^6mm^3","RBC2",
+                    "RBC_best_estimate")
+will_1 <- will_1[, names(will_1) %in% colnames_will_1]
+```
+
+...then we consolidate columns: 
+
+```{r, message=FALSE, warning=FALSE}
+will_1$mass_at_death <- is.numeric(will_1$mass_at_death)
+will_1$`0_wtAVG_hct` <- is.numeric(will_1$`0_wtAVG_hct`)
+will_1$`0_hct2_ratio` <- is.numeric(will_1$`0_hct2_ratio`)
+will_1 <- will_1 %>% mutate(mass_final = coalesce(mass_for_analyses, 
+                                                  mass_at_capture, mass_at_death))
+will_1 <- will_1 %>% mutate(hct = coalesce(hct_best, `0_wtAVG_hct`, `0_hct2_ratio`))
+will_1 <- will_1 %>% mutate(hb = coalesce(hb, hb_corr))
+will_1 <- will_1 %>% mutate(rbc = coalesce(`RBC_best_estimate`,`RBCx10^6mm^3`,`RBC2`))
+will_1 <- will_1 %>% mutate(lat_dec_deg = -((will_1$lat_degrees_S) + 
+                                              (will_1$lat_mins/60)))
+will_1 <- will_1 %>% mutate(long_dec_deg = -((will_1$lon_degrees_W) + 
+                                               (will_1$lon_mins/60)))
+will_1 <- will_1 %>% mutate(lat = coalesce(lat_dec_deg, `lat_dec_deg_S`))
+will_1 <- will_1 %>% mutate(long = coalesce(long_dec_deg, `lon_dec_deg_W`))
+```
+
+...trim down to just the data we need, and reorder columns to match the `linck` dataset...
+
+```{r, message=FALSE, warning=FALSE}
+colnames_drop <- c("mass_at_death","mass_at_capture","mass_for_analyses", "lat_dec_deg_S",
+                   "lon_dec_deg_W","lat_degrees_S","lat_mins","lon_degrees_W",
+                   "lon_mins","hb_corr","uno_corr_factor",
+                   "uno_corr_factor2","hct1_column","hct1_top","hct1_bottom",
+                   "0_hct1_middle_calculated","0_hct1_ratio",
+                   "hct2_column","hct2_top","hct2_bottom","0_hct2_middle_calculated",
+                   "0_hct2_ratio","0_wtAVG_hct",
+                   "hct_best","lat_dec_deg","long_dec_deg","RBCx10^6mm^3",
+                   "RBC2","RBC_best_estimate")
+will_1 <- will_1[, !names(will_1) %in% colnames_drop]
+will_1 <- will_1[, c(1, 2, 6, 3, 4, 5, 7, 8, 9, 10, 12, 13, 14, 11, 16, 17,15)] 
+colnames(will_1) <- c("nk","msb_cat_no","sex","order","family","species",
+                      "day","month","year","elevation",
+                     "notes","mass","hct","hb","lat","long","rbc")
+```
+
+...and drop problematic ata by scanning the notes field:
+
+```{r, message=FALSE, warning=FALSE}
+patterns <- c("unusable","discrepancy","died","poor.*", "broken", "problem.*", 
+              "clot.*", "death", "failed", "bubble",
+              "bad", "stressed", "switched", "not so good", "inferred", "did not", 
+              "didn't", "no dilution", "leaked", 
+              "unspun", "wouldn't", "unspun", "insufficient", "no blood")
+will_1_final  <- filter(will_1, !grepl(paste(patterns, collapse="|"), 
+                                       notes, ignore.case=TRUE))
+```
+
+How many records lost?
+
+```{r, message=FALSE, warning=FALSE}
+nrow(will_1) - nrow(will_1_final) 
+```
+
+How many records and species remain?
+
+```{r, message=FALSE, warning=FALSE}
+nrow(will_1) # number of records
+will_1$species %>% unique() %>% length() # number of species
+```
+
+Now, we subset Jessie's super special *Patagona* data to columns that match the other datasets, and add dummy variables for the info we're missing: 
+
+```{r, message=FALSE, warning=FALSE}
+colnames_will_2 <- c("museum_cat_num","nk","species","elev","month","year","lat",
+                     "lon","sex", "mass","hb", "hct","TRBC")
+will_2 <- will_2[, names(will_2) %in% colnames_will_2]
+will_2$order <- NA
+will_2$family <- NA
+will_2$day <- NA
+will_2$notes <- NA
+will_2 <- will_2[, c(2, 1, 9, 14, 15, 3, 16, 5, 6, 4, 17, 10, 12, 11, 7, 8, 13)]
+colnames(will_2) <- c("nk","msb_cat_no","sex","order","family","species",
+                      "day","month","year","elevation",
+                     "notes","mass","hct","hb","lat","long","rbc")
+will_2_final <- will_2
+```
+
+Let's remove the prefix "MSB:Birds" so the catalog numbers match our other data:
+```{r, message=FALSE, warning=FALSE}
+will_2_final$msb_cat_no <- 
+  sapply(strsplit(will_2_final$msb_cat_no, split=':'), "[", 3) %>% 
+  as.numeric()
+```
+
+We next merge all three datasets, removing duplicate rows: 
+
+```{r, message=FALSE, warning=FALSE}
+# bind together
+df1 <- rbind.data.frame(linck_final, will_1_final, will_2_final)
+
+# function to squish rows together 
+coalesce_all_columns <- function(df) {
+  return(coalesce(!!! as.list(df)))
+}
+
+# do the squishing
+df2 <- df1 %>% 
+  group_by(nk) %>%
+  summarise_all(coalesce_all_columns)
+
+# make sure hb is numeric
+df2$hb <- is.numeric(df2$hb)
+
+
+```
+
+Finally, we calculate secondary blood indices, reorder in a pleasing way, and export as a `.csv`:
+
+```{r, message=FALSE, warning=FALSE}
+df2 <- df2 %>% mutate(hct_percent = hct*100)
+df2 <- df2 %>% mutate(mchc = (hb/hct_percent)*100) 
+df2 <- df2 %>% mutate(mcv = (hct_percent/rbc)*10) 
+df2 <- df2 %>% mutate(mch = (hb/rbc)*10) 
+blood_data_final <- df2[, c(1,2,4,5,6,7,8,9,15,16,10,3,12,14,13,18,17,19,20,21,11)] 
+write.csv(blood_data_final, "~/Dropbox/andean_range_limits/data/blood_data_final.csv")
+```
+
+What's it look like?
+```{r, message=FALSE, warning=FALSE}
+head(blood_data_final)
+```
+
+How many records and species?
+
+```{r, message=FALSE, warning=FALSE}
+nrow(blood_data_final) # number of records
+blood_data_final$species %>% unique() %>% length() # number of species
+```

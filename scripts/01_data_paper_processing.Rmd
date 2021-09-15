@@ -43,7 +43,16 @@ colnames_linck <- c("NK", "MSB_Cat_NUM", "Order", "Family", "Scientific name",
 linck <- linck[, names(linck) %in% colnames_linck]
 ```
 
-I've included more columns than we'll use for the final dataset because we want to make that the "best" estimates for mass, hemoglobin and hematocrit haven't been left blank unnecessarily. We'll take care of that now—note that the `coalesce()` function selects a value for its given column (e.g., `hb_final`) from the columns provided to its arguments, *in that order*. For example: the new column `mass_final` draws on data in `Mass for analyses` first, but if left blank, will next look to `Mass at capture` and then lastly `mass at death`. 
+I've included more columns than we'll use for the final dataset because we want to make that the "best" estimates for mass, hemoglobin and hematocrit haven't been left blank unnecessarily. First, let's tweak raw hemoglobin values so we can use them if we need to:
+
+```{r, message=FALSE, warning=FALSE}
+linck$`tHb` <- as.numeric(linck$`tHb`)
+linck$`tHbcorr` <- as.numeric(linck$`tHbcorr`)
+unopette_correction_factor <- 1
+linck$`tHbcorr` <- (linck$`tHbcorr`-unopette_correction_factor)
+```
+
+Now, we'll apply the `coalesce()` function to fill in the blanks. This function selects a value for its given column (e.g., `hb_final`) from the columns provided to its arguments, *in that order*. For example: the new column `mass_final` draws on data in `Mass for analyses` first, but if left blank, will next look to `Mass at capture` and then lastly `mass at death`. 
 
 ```{r, message=FALSE, warning=FALSE}
 linck$`mass at death` <- as.numeric(linck$`mass at death`)
@@ -89,13 +98,13 @@ colnames(linck) <- c("nk","msb_cat_no","sex","order","family","species","day",
                      "notes","mass","hct","hb","lat","long", "rbc")
 ```
 
-A character-to-numeric column change is necessary:
+A character-to-numeric column check is always good:
 
 ```{r, message=FALSE, warning=FALSE}
 linck$hb <- as.numeric(linck$hb)
 ```
 
-Lastly, we'll scan the "Notes" field and exclude any observation with common phrases that indicate problematic data:
+Lastly, we'll scan the "Notes" field and exclude any observation with common phrases that indicate problematic data. We'll also attempt to distinguish between issues that affect Hb and Hct, but if specific blood traits are not mentioned in the comment, we'll get rid of the entire record:
 
 ```{r, message=FALSE, warning=FALSE}
 patterns <- c("unusable","discrepancy","died","poor.*", "broken", "problem.*", 
@@ -103,7 +112,17 @@ patterns <- c("unusable","discrepancy","died","poor.*", "broken", "problem.*",
               "bad", "stressed", "switched", "not so good", "inferred", "did not", 
               "didn't", "no dilution", "leaked", 
               "unspun", "wouldn't", "unspun", "insufficient", "no blood")
-linck_final <- filter(linck, !grepl(paste(patterns, collapse="|"), notes, ignore.case=TRUE))
+linck_temp <- filter(linck, grepl(paste(patterns, collapse="|"), notes, ignore.case=TRUE))
+linck_hb_issues <- filter(linck_temp, grepl(paste("hb", collapse="|"), notes, ignore.case=TRUE))
+linck_hb_issue_index <- linck_hb_issues$nk
+linck[linck$nk %in% linck_hb_issue_index,]$hb <- NA
+linck_hct_issues <- filter(linck_temp, grepl(paste("hct", collapse="|"), notes, ignore.case=TRUE))
+linck_hct_issue_index <- linck_hct_issues$nk
+linck[linck$nk %in% linck_hct_issue_index,]$hct <- NA
+linck_issues_remainder_1 <- setdiff(linck_temp$nk, linck_hb_issue_index)
+linck_issues_remainder_2 <- setdiff(linck_temp$nk, linck_hct_issue_index)
+linck_issues <- coalesce(linck_issues_remainder_1, linck_issues_remainder_1)
+linck_final <- linck[!linck$nk %in% linck_issues,]
 ```
 
 How many records did this drop?
@@ -139,16 +158,17 @@ colnames_will_1 <- c("nk", "msb_cat_no", "order", "family", "species",
 will_1 <- will_1[, names(will_1) %in% colnames_will_1]
 ```
 
-...then we consolidate columns: 
+...then we correct raw Hb values, and consolidate columns: 
 
 ```{r, message=FALSE, warning=FALSE}
+will_1$hb <- (will_1$hb-unopette_correction_factor)
 will_1$mass_at_death <- as.numeric(will_1$mass_at_death)
 will_1$`0_wtAVG_hct` <- as.numeric(will_1$`0_wtAVG_hct`)
 will_1$`0_hct2_ratio` <- as.numeric(will_1$`0_hct2_ratio`)
 will_1 <- will_1 %>% mutate(mass_final = coalesce(mass_for_analyses, 
                                                   mass_at_capture, mass_at_death))
 will_1 <- will_1 %>% mutate(hct = coalesce(hct_best, `0_wtAVG_hct`, `0_hct2_ratio`))
-will_1 <- will_1 %>% mutate(hb = coalesce(hb, hb_corr))
+will_1 <- will_1 %>% mutate(hb = coalesce(hb_corr, hb))
 will_1 <- will_1 %>% mutate(rbc = coalesce(`RBC_best_estimate`,`RBCx10^6mm^3`,`RBC2`))
 will_1 <- will_1 %>% mutate(lat_dec_deg = -((will_1$lat_degrees_S) + 
                                               (will_1$lat_mins/60)))
@@ -185,8 +205,17 @@ patterns <- c("unusable","discrepancy","died","poor.*", "broken", "problem.*",
               "bad", "stressed", "switched", "not so good", "inferred", "did not", 
               "didn't", "no dilution", "leaked", 
               "unspun", "wouldn't", "unspun", "insufficient", "no blood")
-will_1_final  <- filter(will_1, !grepl(paste(patterns, collapse="|"), 
-                                       notes, ignore.case=TRUE))
+will_1_temp <- filter(will_1, grepl(paste(patterns, collapse="|"), notes, ignore.case=TRUE))
+will_1_hb_issues <- filter(will_1_temp, grepl(paste("hb", collapse="|"), notes, ignore.case=TRUE))
+will_1_hb_issue_index <- will_1_hb_issues$nk
+will_1[will_1$nk %in% will_1_hb_issue_index,]$hb <- NA
+will_1_hct_issues <- filter(will_1_temp, grepl(paste("hct", collapse="|"), notes, ignore.case=TRUE))
+will_1_hct_issue_index <- will_1_hct_issues$nk
+will_1[will_1$nk %in% will_1_hct_issue_index,]$hct <- NA
+will_1_issues_remainder_1 <- setdiff(will_1_temp$nk, will_1_hb_issue_index)
+will_1_issues_remainder_2 <- setdiff(will_1_temp$nk, will_1_hct_issue_index)
+will_1_issues <- coalesce(will_1_issues_remainder_1, will_1_issues_remainder_1)
+will_1_final <- will_1[!will_1$nk %in% will_1_issues,]
 ```
 
 How many records lost?
@@ -208,8 +237,8 @@ Now, we subset Jessie's super special *Patagona* data to columns that match the 
 colnames_will_2 <- c("museum_cat_num","nk","species","elev","month","year","lat",
                      "lon","sex", "mass","hb", "hct","TRBC")
 will_2 <- will_2[, names(will_2) %in% colnames_will_2]
-will_2$order <- NA
-will_2$family <- NA
+will_2$order <- "Apodiformes"
+will_2$family <- "Trochilidae"
 will_2$day <- NA
 will_2$notes <- NA
 will_2$species <- gsub("_", " ", will_2$species)
@@ -254,6 +283,7 @@ df2 <- df2 %>% mutate(hct_percent = hct*100)
 df2 <- df2 %>% mutate(mchc = (hb/hct_percent)*100) 
 df2 <- df2 %>% mutate(mcv = (hct_percent/rbc)*10) 
 df2 <- df2 %>% mutate(mch = (hb/rbc)*10) 
+df2$arctos_url <- NA
 df2$arctos_url <- paste0("https://arctos.database.museum/guid/","MSB:Bird:",df2$msb_cat_no)
 df2$arctos_url[df2$arctos_url=="https://arctos.database.museum/guid/MSB:Bird:NA"] <- NA
 blood_data_final <- df2[, c(1,2,22,4,5,6,7,8,9,15,16,10,3,12,14,13,18,17,19,20,21,11)] 

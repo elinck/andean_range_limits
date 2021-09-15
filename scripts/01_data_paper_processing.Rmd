@@ -46,8 +46,8 @@ linck <- linck[, names(linck) %in% colnames_linck]
 I've included more columns than we'll use for the final dataset because we want to make that the "best" estimates for mass, hemoglobin and hematocrit haven't been left blank unnecessarily. We'll take care of that now—note that the `coalesce()` function selects a value for its given column (e.g., `hb_final`) from the columns provided to its arguments, *in that order*. For example: the new column `mass_final` draws on data in `Mass for analyses` first, but if left blank, will next look to `Mass at capture` and then lastly `mass at death`. 
 
 ```{r, message=FALSE, warning=FALSE}
-linck$`mass at death` <- is.numeric(linck$`mass at death`)
-linck$`2ndHct-ratio` <- is.numeric(linck$`2ndHct-ratio`)
+linck$`mass at death` <- as.numeric(linck$`mass at death`)
+linck$`2ndHct-ratio` <- as.numeric(linck$`2ndHct-ratio`)
 linck <- linck %>% mutate(mass_final = 
                             coalesce(`Mass for analyses`, `Mass at capture`,
                                      `mass at death`))
@@ -87,6 +87,12 @@ linck$rbc <- NA
 colnames(linck) <- c("nk","msb_cat_no","sex","order","family","species","day",
                      "month","year","elevation",
                      "notes","mass","hct","hb","lat","long", "rbc")
+```
+
+A character-to-numeric column change is necessary:
+
+```{r, message=FALSE, warning=FALSE}
+linck$hb <- as.numeric(linck$hb)
 ```
 
 Lastly, we'll scan the "Notes" field and exclude any observation with common phrases that indicate problematic data:
@@ -136,9 +142,9 @@ will_1 <- will_1[, names(will_1) %in% colnames_will_1]
 ...then we consolidate columns: 
 
 ```{r, message=FALSE, warning=FALSE}
-will_1$mass_at_death <- is.numeric(will_1$mass_at_death)
-will_1$`0_wtAVG_hct` <- is.numeric(will_1$`0_wtAVG_hct`)
-will_1$`0_hct2_ratio` <- is.numeric(will_1$`0_hct2_ratio`)
+will_1$mass_at_death <- as.numeric(will_1$mass_at_death)
+will_1$`0_wtAVG_hct` <- as.numeric(will_1$`0_wtAVG_hct`)
+will_1$`0_hct2_ratio` <- as.numeric(will_1$`0_hct2_ratio`)
 will_1 <- will_1 %>% mutate(mass_final = coalesce(mass_for_analyses, 
                                                   mass_at_capture, mass_at_death))
 will_1 <- will_1 %>% mutate(hct = coalesce(hct_best, `0_wtAVG_hct`, `0_hct2_ratio`))
@@ -206,6 +212,7 @@ will_2$order <- NA
 will_2$family <- NA
 will_2$day <- NA
 will_2$notes <- NA
+will_2$species <- gsub("_", " ", will_2$species)
 will_2 <- will_2[, c(2, 1, 9, 14, 15, 3, 16, 5, 6, 4, 17, 10, 12, 11, 7, 8, 13)]
 colnames(will_2) <- c("nk","msb_cat_no","sex","order","family","species",
                       "day","month","year","elevation",
@@ -237,23 +244,25 @@ df2 <- df1 %>%
   summarise_all(coalesce_all_columns)
 
 # make sure hb is numeric
-df2$hb <- is.numeric(df2$hb)
-
-
+df2$hb <- as.numeric(df2$hb)
 ```
 
-Finally, we calculate secondary blood indices, reorder in a pleasing way, and export as a `.csv`:
+Finally, we calculate secondary blood indices, add an Arctos URL, reorder in a pleasing way, and export as a `.csv`:
 
 ```{r, message=FALSE, warning=FALSE}
 df2 <- df2 %>% mutate(hct_percent = hct*100)
 df2 <- df2 %>% mutate(mchc = (hb/hct_percent)*100) 
 df2 <- df2 %>% mutate(mcv = (hct_percent/rbc)*10) 
 df2 <- df2 %>% mutate(mch = (hb/rbc)*10) 
-blood_data_final <- df2[, c(1,2,4,5,6,7,8,9,15,16,10,3,12,14,13,18,17,19,20,21,11)] 
+df2$arctos_url <- paste0("https://arctos.database.museum/guid/","MSB:Bird:",df2$msb_cat_no)
+df2$arctos_url[df2$arctos_url=="https://arctos.database.museum/guid/MSB:Bird:NA"] <- NA
+blood_data_final <- df2[, c(1,2,22,4,5,6,7,8,9,15,16,10,3,12,14,13,18,17,19,20,21,11)] 
+blood_data_final <- blood_data_final[order(blood_data_final$species),]
 write.csv(blood_data_final, "~/Dropbox/andean_range_limits/data/blood_data_final.csv")
 ```
 
 What's it look like?
+
 ```{r, message=FALSE, warning=FALSE}
 head(blood_data_final)
 ```

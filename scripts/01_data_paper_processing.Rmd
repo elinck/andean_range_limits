@@ -288,7 +288,8 @@ df2$arctos_url <- paste0("https://arctos.database.museum/guid/","MSB:Bird:",df2$
 df2$arctos_url[df2$arctos_url=="https://arctos.database.museum/guid/MSB:Bird:NA"] <- NA
 blood_data_final <- df2[, c(1,2,22,4,5,6,7,8,9,15,16,10,3,12,14,13,18,17,19,20,21,11)] 
 blood_data_final <- blood_data_final[order(blood_data_final$species),]
-write.csv(blood_data_final, "~/Dropbox/andean_range_limits/data/blood_data_final.csv")
+write.csv(blood_data_final, "~/Dropbox/andean_range_limits/data/blood_data_final.csv", 
+          row.names = FALSE)
 ```
 
 What's it look like?

@@ -34,7 +34,7 @@ blood_slope <- function(input_object){
     slope.hb <- mod.hb.sum$coefficients[2,1] # get hb slope
     r2.hb <- mod.hb.sum$r.squared # get hb r-squared
     se.hb <- mod.hb.sum$coefficients[2,2] # get hb SE
-    mod.hct <- lm(hct ~ elevation, tmp) # simple regression for mass change
+    mod.hct <- lm(hct_percent ~ elevation, tmp) # simple regression for mass change
     mod.hct.sum <- summary(mod.hct)
     slope.hct <- mod.hct.sum$coefficients[2,1] # get hct slope
     r2.hct <- mod.hct.sum$r.squared # get hct r-squared

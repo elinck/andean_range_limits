@@ -1,0 +1,606 @@
+---
+title: "The evolution of elevational specialization (and why studying it is hard)" 
+author: Ethan B. Linck
+date: |
+  | University of New Mexico 
+  | Department of Biology & Museum of Southwestern Biology
+header-includes:
+- \addtobeamertemplate{title page}{\centering \includegraphics[width=1\textwidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/aos_title.png}}{}
+output: beamer_presentation
+fontsize: 12pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Big Pattern: $\beta$ diversity and elevation
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/beta_div.jpg}
+\end{figure}  
+(McKnight et al. 2007)
+
+## Elevational specialization
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/thrushes.jpg}
+\end{figure}
+(Freeman & Montgomery 2015)
+
+## Big Questions
+
+- What are the evolutionary *causes* of elevational specialization?
+- What are its possible *consequences*?  
+- (Why is this such a hard question to study?) 
+
+# Littler Question 1: Does parapatric speciation generate $\beta$ diversity?  
+
+## Acknowledgements:
+
+- **Collaborators and Coauthors**: Salape Tulai, Bulisa Iova, Georgia Kapui, Ben Freeman, Jack Dumbacher, John Klicka, C.J. Battey, Kevin Epperly  
+
+- **Funding**: NSF DDIG #1701224, NSF DEB #0108247, and NDSEG and WRF-Hall Fellowships
+
+## Elevational replacements
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/diamond_modified.png}
+\end{figure}  
+(Diamond 1972)
+
+## Alternate paths to the same result  
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/elev_series_hypo.png}
+\end{figure}  
+
+## Phylogeny and the geography of speciation  
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/speciation_losos.jpg}  
+\end{figure}  
+
+(Losos & Glor 2003)  
+
+## *Syma* kingfishers as natural experiment
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=4, fig.width=6}
+library(png)
+library(grid)
+library(raster)
+library(tidyverse)
+library(patchwork)
+
+setwd("~/Dropbox/syma_speciation/")
+
+# load kingfisher picture
+h <- readPNG("~/Dropbox/andean_range_limits/figures/syma_2x1.png")
+h <- rasterGrob(h)
+
+# write map
+map <- map_data("world")
+toro_range <- shapefile("data/Syma_torotoro_22683566.shp")
+mega_range <- shapefile("data/Syma_megarhyncha_22683569.shp")
+toro_range <- fortify(toro_range)
+mega_range <- fortify(mega_range)
+
+# plot map
+a <- ggplot()+coord_map()+theme_classic()+ylim(-14.5,2)+xlim(129,154)+
+  scale_fill_manual(values = c("#73D056FF","#20938CFF","#443B84FF"))+
+  #scale_fill_manual(name="species",values = c("grey45","grey85"))+
+  theme(panel.grid=element_blank(),axis.ticks = element_blank(),axis.title = element_blank(),
+        axis.text = element_blank())+
+  guides(colour = guide_legend(override.aes = list(size=6)))+
+  geom_polygon(data=toro_range, aes(x=long,y=lat,group=group),fill="gray75")+
+  geom_polygon(data=mega_range, aes(x=long,y=lat,group=group),fill="gray40")+
+  #geom_path(data=state,aes(x=long,y=lat,group=group),col="grey",lwd=0.25)+
+  geom_path(data=map,aes(x=long,y=lat,group=group))+
+  scale_size_continuous(range = c(3,8), breaks = c(1,2,3),name = "Samples") +
+  labs(fill="Species") +
+  guides(fill = guide_legend(override.aes = list(size=5)))+
+  theme(legend.text=element_text(size=15),
+        legend.title=element_text(size=15))
+#theme(legend.justification=c(1,1), legend.position=c(1,1))
+
+a + h
+```
+(art by Kevin Epperly)
+
+## $H_{1}$: Parallel parapatric speciation   
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=4, fig.width=6}
+library(phylogram)
+library(ggtree)
+library(raster)
+library(tidyverse)
+library(patchwork)
+
+x <- read.dendrogram(text = "((torotoro,megarhyncha),(torotoro,megarhyncha));")
+x <- as.phylo(x)
+x <- ggtree(x) + 
+  theme_tree() +
+  geom_tiplab() +
+  #geom_text2(aes(label=node), hjust=-.3) +
+  xlim(0,3.5) +
+  geom_hilight(node=1, fill="#443B84FF") +
+  geom_hilight(node=2, fill="#73D056FF") +
+  geom_hilight(node=3, fill="#443B84FF") +
+  geom_hilight(node=4, fill="#73D056FF")
+x
+```
+
+## Methods  
+
+- mtDNA and nuclear DNA from fresh and historic tissues  
+- phylogenetic inference, clustering, and demographic modeling  
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=4, fig.width=7}
+
+setwd("~/Dropbox/syma_speciation/")
+
+###  Figure 1
+
+# prepare PC and map data
+sample_data <- read.csv("data/syma_spp_pcs.csv")
+attach(sample_data)
+sample_data$sp <- as.character(sample_data$sp)
+sample_data$sp[which(sample_data$ssp == "ochracea")] <- "ochracea"
+sample_data$sp <- as.factor(sample_data$sp)
+sp_means <- aggregate(PC1 ~ sp, data = sample_data, mean)
+meg_val <- sp_means$PC1[1]
+och_val <- sp_means$PC1[2]
+tor_val <- sp_means$PC1[3]
+sample_data$col <- ifelse(sample_data$sp == "megarhyncha", 
+                          meg_val, ifelse(sample_data$sp == "torotoro",
+                                          tor_val,och_val))
+sample_data$temp <- as.factor(paste(sample_data$lat, sample_data$long)) # messy sample size assignment
+sample_data$size <- 1
+sample_data$size[sample_data$temp == "-5.95 134.57"] <- 3
+sample_data$size[sample_data$temp == "-2.72 134.5"] <- 2
+sample_data$size[sample_data$temp == "-3.683 143.633"] <- 2
+sample_data$size[sample_data$temp == "-6.4583 147.4333"] <- 2
+sample_data$size[sample_data$temp == "-8.25 142.98"] <- 2
+sample_data$size[sample_data$temp == "9.5 150.666667"] <- 2
+
+map <- map_data("world")
+toro_range <- shapefile("data/Syma_torotoro_22683566.shp")
+mega_range <- shapefile("data/Syma_megarhyncha_22683569.shp")
+toro_range <- fortify(toro_range)
+mega_range <- fortify(mega_range)
+
+# plot map
+a <- ggplot()+coord_map()+theme_classic()+ylim(-14.5,2)+xlim(129,154)+
+  scale_fill_manual(values = c("#73D056FF","#20938CFF","#443B84FF"))+
+  scale_shape_manual(values=c(22, 24, 21)) +
+  #scale_fill_manual(name="species",values = c("grey45","grey85"))+
+  theme(panel.grid=element_blank(),axis.ticks = element_blank(),axis.title = element_blank(),
+        axis.text = element_blank())+
+  guides(colour = guide_legend(override.aes = list(size=6)))+
+  geom_polygon(data=toro_range, aes(x=long,y=lat,group=group),fill="gray75")+
+  geom_polygon(data=mega_range, aes(x=long,y=lat,group=group),fill="gray40")+
+  #geom_path(data=state,aes(x=long,y=lat,group=group),col="grey",lwd=0.25)+
+  geom_path(data=map,aes(x=long,y=lat,group=group))+
+  geom_point(data=sample_data,aes(x=long,y=lat,fill=sp,shape=sp,size=sample_data$size), alpha=0.85,stroke=1) +
+  scale_size_continuous(range = c(3,8), breaks = c(1,2,3),name = "Samples") +
+  labs(fill="Species",shape="Species") +
+  guides(fill = guide_legend(override.aes = list(size=5)))+
+  theme(legend.text=element_text(size=15),
+        legend.title=element_text(size=15))
+#theme(legend.justification=c(1,1), legend.position=c(1,1))
+
+a
+```
+
+## No evidence for parallel parapatric speciation
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=4, fig.width=7}
+
+library(ggtree)
+library(treeio)
+
+setwd("~/Dropbox/syma_speciation/")
+
+# read mcc ND2 tree from beast
+beast <- read.beast("~/Dropbox/syma_speciation/data/syma_ND2.tree")
+beast@data[isTip(beast, beast@data$node),]$length_0.95_HPD <- NA
+
+# fortify data, change tip labels
+beast <- fortify(beast)
+beast$label <- c("EL10_toro","EL11_toro","EL13_toro","EL18_mega","EL19_mega","EL1_mega","EL20_mega",  
+                 "EL21_toro","EL23_mega","EL24_mega","EL27_mega","EL29_ochr","EL32_toro","EL39_toro",  
+                 "EL40_mega","EL41_toro","EL42_toro","EL43_toro","EL44_toro","EL45_toro","EL46_toro",  
+                 "EL47_toro","EL48_ochr","EL4_mega" ,"EL50_toro","EL51_toro","EL52_toro",  
+                 "EL53_toro","EL54_toro","EL55_toro","EL57_toro","EL59_toro",  
+                 "EL5_ochr" ,"EL60_toro","EL6_mega" ,"EL8_toro" ,"EL9_toro" ,"t_sanctus", rep("NA",37))
+# set up base tree, plot nodes
+tmp1 <- ggtree(beast, mrsd="2000-12-12") + 
+  theme_tree2() +
+  geom_text2(aes(subset=!isTip, label=node), hjust=-.3)
+
+# drop node labels
+tmp1 <- ggtree(beast, mrsd="2000-12-12") + 
+  theme_tree2()
+
+# add colors
+clr <- beast$label[1:38]
+clr[grepl("toro",clr)]<-"#443B84FF" 
+clr[grepl("mega",clr)]<-"#73D056FF"
+clr[grepl("ochr",clr)]<-"#20938CFF"
+clr[38] <- "black"
+
+# plot final tree
+e <- revts(tmp1) +
+  #geom_tiplab(align=TRUE, linetype='dashed', linesize=.3, color=clr) + 
+  # geom_text2(aes(subset=!isTip, label=node), hjust=-.3) +
+  geom_range("height_0.95_HPD", color='black', size=2, alpha=.5)  + 
+  xlim(-2500000,400000) +
+  theme(axis.text.x = element_text(size=15)) +
+  geom_text2(aes(label=round(as.numeric(posterior), 2), 
+                 subset=as.numeric(posterior)>.99, 
+                 x=branch), hjust=1.25,vjust=-0.5, size=5) +
+  geom_hilight(node=41, fill="#443B84FF") +
+  geom_hilight(node=74, fill="#73D056FF") +
+  geom_hilight(node=65, fill="#20938CFF")
+
+
+# prepare PC and map data
+sample_data <- read.csv("data/syma_spp_pcs.csv")
+attach(sample_data)
+sample_data$sp <- as.character(sample_data$sp)
+sample_data$sp[which(sample_data$ssp == "ochracea")] <- "ochracea"
+sample_data$sp <- as.factor(sample_data$sp)
+sp_means <- aggregate(PC1 ~ sp, data = sample_data, mean)
+
+# convex hull for PCA
+hull_tor <- sample_data[sample_data$sp=="torotoro",] %>%
+  slice(chull(PC1, PC2))
+hull_meg <- sample_data[sample_data$sp=="megarhyncha",] %>%
+  slice(chull(PC1, PC2))
+hull_ochr <- sample_data[sample_data$sp=="ochracea",] %>%
+  slice(chull(PC1, PC2))
+
+# pca
+b <- ggplot(data=sample_data,aes(x=PC1,y=PC2,fill=sp,color=sp)) + 
+  geom_point(aes(shape=sp)) +
+  scale_fill_manual(values = c("#73D056FF","#20938CFF","#443B84FF"),guide=FALSE)+
+  scale_color_manual(values = c("#73D056FF","#20938CFF","#443B84FF"), guide=FALSE)+
+  scale_shape_manual(values=c(22, 24, 21),guide=FALSE) +
+  theme_classic() +
+  xlab("Genotype PC1") +
+  ylab("Genotype PC2") +
+  geom_polygon(data = hull_tor, alpha = 0.5) +
+  geom_polygon(data = hull_meg, alpha = 0.5) +
+  geom_polygon(data = hull_ochr, alpha = 0.5) +
+  theme(legend.text=element_text(size=15),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=15),
+        legend.title=element_text(size=15))
+
+e + b
+```
+(Linck, Freeman, & Dumbacher 2020)
+
+# We conclude: speciation in allopatry is more likely (but parapatric speciation is possible, and gene flow was involved)
+
+## Why it's unsatisfying: 
+
+"Formal hypotheses generally cannot usefully be posed in a way that allows meaningful disproof of a finite number of discrete possibilities" (Quinn & Dunham 1983, "On Hypothesis Testing in Ecology and Evolution", *The American Naturalist*)
+
+## Why it's unsatisfying, part 2:  
+
+"Physicists and chemists often have genuine difficulty in understanding the biologist's stress of the unique...individuality [is] so characteristic of the organic world, where all individuals are unique; all stages in the life cycle are unique; all populations are unique; all species and higher categories are unique; all interindividual contacts are unique; all natural associations of species are unique; and all evolutionary events are unique" (Mayr 1961, "Cause and Effect in Biology", *Science*)
+
+# Littler Question 2: Does physiology limit elevational ranges?
+
+## Acknowledgements:
+
+- **Collaborators and Coauthors**: Jessie L. Williamson, Emil Bautista, Elizabeth J. Beckman, Phred M. Benham,Shane G. DuBay, L. Monica Flores, Chauncey R. Gadek, Andrew B. Johnson, Matthew R. Jones, Jano Núñez-Zapata, Alessandra Quiñonez, C. Jonathan Schmitt, Dora Susanibar, Jorge Tiravanti C., Karen Verde-Guerra, Natalie A. Wright, Thomas Valqui, Jay F. Storz, Christopher C. Witt  
+
+- **Funding**: NSF DBI #1907353, DEB #1146491, and DEB #0543556  
+
+## Blood $O_{2}$-carrying capacity and elevational specialization
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE, fig.height=4, fig.width=7}
+# libraries
+library(ggplot2)
+library(cowplot)
+library(tidyverse, quietly = TRUE)
+
+# load functions script
+source("~/Dropbox/andean_range_limits/scripts/00_functions.R")
+
+# calculate water vapor pressure based on temperature and humidity
+wvp <- water_vapor_pressure(temp_celsius = 15, humidity = 20)
+
+# assign coefficients for formulae
+sea_level_pressure <- 760 # in mmHg
+mass <- 0.0289644 # molar mass of gas in kg/mol
+gravity <- 9.81 # acceleration due to gravity in m/s2
+gas_constant <- 8.3145 #J/molK
+temp_kelvin <- 15 + 273.15 # assuming 15C here
+mbar_conversion <- 1.33322 # convert mmHg to mbar
+o2 <- 0.2095 # proportion o2 in atmosphere
+max_o2 <- ((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*0)*mbar_conversion)-wvp)*o2
+
+# barometric formula
+p <- function(x) sea_level_pressure *exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion
+o <- function(x) ((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion)-wvp)*o2
+po2 <-function(x) (((sea_level_pressure*exp(-(mass*gravity)/(gas_constant*temp_kelvin)*x)*mbar_conversion)-wvp)*o2/max_o2)*100
+
+p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+  theme_bw() +
+  stat_function(fun = po2) +
+  scale_linetype_discrete(guide=FALSE) +
+  theme(panel.grid = element_blank()) +
+  xlim(0,9500) +
+  ylim(0,100) +
+  geom_vline(xintercept = 1619, size=3, alpha=0.3) +
+  geom_text(aes(x=1319, label="Albuquerque, NM: 82%", y=20), angle=90, size=3) +
+  geom_vline(xintercept = 3982, size=3, alpha=0.2) +
+  geom_text(aes(x=3682, label="Mt. Wheeler, NM: 62%", y=20), angle=90, size=3) +
+  geom_vline(xintercept = 6768, size=3, alpha=0.1) +
+  geom_text(aes(x=6468, label="Huascarán, Peru: 44%", y=20), angle=90, size=3) +
+  geom_text(aes(x=7300, label="15°C, 20% humidity", y=100,), size=3) +
+  xlab("Elevation (m)") +
+  ylab(expression(paste("% sea level ", PO[2]))) +
+  labs(linetype=element_blank()) +
+  theme(legend.position = c(0.8, 0.9))
+
+# load stotz data
+stotz <- read.csv("~/Dropbox/andean_range_limits/data/stotz_elevation_data.csv")
+stotz <- cbind.data.frame(stotz$GENUS, stotz$SPECIES, 
+                          stotz$MIN, stotz$MAX, stotz$MIDPT.ELEV)
+colnames(stotz) <- c("genus","species","elev_min","elev_max","elev_midpt")
+stotz$elev_range <- stotz$elev_max - stotz$elev_min
+stotz_mod <- stotz[stotz$elev_range>0,]
+
+ranges <- ggplot(stotz_mod, aes(x=elev_range)) +
+  geom_histogram(binwidth = 100, color="black",fill="gray70") +
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        axis.title = element_text(size=15)) +
+  xlab("elevational range breadth")  +
+  geom_vline(xintercept = median(stotz$elev_range, na.rm=TRUE),
+             linetype="dashed",size=1.5, color="red")
+
+o2_ranges <- plot_grid(p2, ranges, nrow=1)
+o2_ranges
+```
+
+## Respiratory plasticity  
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+library(tidyverse)
+library(cowplot)
+
+# read in hb data, subset
+blood_df <- read.csv("~/Dropbox/andean_range_limits/data/filtered_hb_dataset.csv")
+cyan <- filter(blood_df, species=="Diglossa cyanea")
+brun <- filter(blood_df, species=="Diglossa brunneiventris")
+
+# make plot
+cyan_plasticity <- ggplot(cyan, aes(x=elevation, y=hb)) +
+ geom_point(pch=21,stroke=1,color="black",show.legend = FALSE) +
+ geom_smooth(method="lm",se=FALSE,linetype="dashed",color="red") +
+ theme_bw() +
+ theme(panel.grid = element_blank(),
+       strip.background = element_blank(),
+       plot.title = element_text(color = "red"),
+       axis.title = element_text(size=15)) +
+ xlab("Elevation")+
+ xlim(1000, 4500) + 
+ ylim(11, 25) + 
+ ylab("[Hb]") +
+ ggtitle("shallower slope, less plastic")
+
+brun_plasticity <- ggplot(brun, aes(x=elevation, y=hb)) +
+ geom_point(pch=21,stroke=1,color="black",show.legend = FALSE) +
+ geom_smooth(method="lm",se=FALSE,linetype="dashed",color="red") +
+ theme_bw() +
+ theme(panel.grid = element_blank(),
+       strip.background = element_blank(),
+       plot.title = element_text(color = "red"),
+       axis.title = element_text(size=15)) +
+ xlab("Elevation")+
+ xlim(1000, 4500) +
+ ylim(11, 25) + 
+ ylab("[Hb]") +
+ ggtitle("steeper slope, more plastic")
+
+plasticity <- plot_grid(cyan_plasticity, brun_plasticity, nrow=1)
+```
+```{r, fig.height=4, fig.width=7, echo=FALSE, message=FALSE, warning=FALSE}
+plasticity
+```
+ 
+## $H_{1}$: Respiratory plasticity facilitates niche breadth
+
+```{r, warning=FALSE, message=FALSE, echo=FALSE}
+library(ggplot2)
+library(cowplot)
+
+fun.1 <- function(x) 3*x + 2
+fun.2 <- function(x) -3*x + 2
+fun.3 <- function(x) 2
+
+p1 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+ stat_function(fun = fun.1, linetype="dashed", color="black", size=1) +
+#stat_function(fun = fun.1, color="black", size=20, alpha=0.2) +
+ xlim(1,10) +
+ theme_classic() +
+ theme(axis.text = element_blank(),
+       axis.ticks = element_blank(),
+       axis.title = element_text(size=10)) +
+ xlab("Elevational Range Breadth") +
+ ylab("Respiratory Plasticity") 
+#ggtitle("H1: Plasticity facilitates niche breadth \nGeneralists have greater respiratory plasticity \n")
+
+p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
+  stat_function(fun = fun.2, linetype="dashed", color="black", size=1) +
+  #stat_function(fun = fun.2, color="black", size=20, alpha=0.2) +
+  xlim(0,10) +
+  theme_classic() +
+  theme(axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title = element_text(size=10)) +
+  xlab("Elevational Range Breadth") +
+  ylab("Respiratory Plasticity") 
+  #ggtitle("H2: Plasticity constrains nichee breadth \nSpecialists have greater respiratory plasticity \n")
+
+top <- plot_grid(p1, p2, nrow=1)
+```
+```{r, echo=FALSE, fig.height=2.5, fig.width=2.5, fig.align='center'}
+p1
+```
+
+## Methods
+
+- **[Hb]** from 2367 individuals of 137 species
+- Bayesian multivariate linear models  
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=3, fig.width=7}
+library(mapdata)
+
+coast_map <- fortify(map("worldHires", fill=TRUE, plot=FALSE))
+p4 <- ggplot() + coord_map() +
+  theme_bw() +
+  #theme(axis.title.x=element_blank(),
+  #      axis.title.y=element_blank()) +
+  #geom_map(data=coast_map, map=coast_map, aes(x=long, y=lat, map_id=region), 
+  #         fill="white", color="black") +
+  geom_map(data=data.frame(region="Peru"), map=coast_map,
+                    aes(map_id=region), fill="gray100", col="gray0") + 
+  xlim(-82,-68) + 
+  xlab("latitude") +
+  ylab("longitude") +
+  ylim(-19,0.5) +
+  #geom_point(data=df,aes(x=long, y=lat,fill=elev), colour="black",pch=21,alpha=0.3,size = 0.5) + 
+  #scale_fill_gradient(low = "white", high = "black") +
+  #xlab("longitude") +
+  #ylab("latitude") +
+  stat_bin2d(data=blood_df, aes(x=long, y=lat,fill = ..count..), color="black", binwidth = c(0.5,0.5)) +
+  scale_fill_gradient(low = "white", high = "black") #name = element_blank())
+
+p5 <- ggplot(blood_df, aes(x=elevation)) + geom_histogram(binwidth = 100, color="black",fill="gray70") +
+  theme_bw() +
+  theme(axis.title.y = element_blank()) +
+  xlab("elevation (m)")
+
+plot_grid(p4, p5)
+```
+
+## Elevational generalists are more plastic
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+library(tidybayes)
+library(tidyverse)
+
+source("~/Dropbox/andean_range_limits/scripts/00_functions.R")
+
+# load draws and evaluate levels of support for different variables with function
+slope_hb_draws <- read_csv("~/Dropbox/andean_range_limits/data/slope_hb_draws_interaction.csv") 
+
+# calculate width for point interval probabilities
+slope_hb_draws <- slope_hb_draws %>% 
+group_by(.variable) %>% 
+median_hdi(.value, .width = c(.95, .80, .5)) %>%
+group_by(.variable) %>% 
+mutate(condition_mean = mean(.value)) 
+
+# assign credibility levels
+
+# assign credibility levels
+slope_hb_draws <- credibility_coder(slope_hb_draws)
+
+# turn into factor
+slope_hb_draws$credible <- as.factor(slope_hb_draws$credible)
+```
+```{r, echo=FALSE, fig.height=4,fig.width=6}
+p17 <- ggplot(slope_hb_draws, aes(y = fct_rev(.variable), 
+            x=condition_mean, 
+            xmin = .lower, 
+            xmax = .upper,
+            size = -.width)) +
+ geom_pointinterval(aes(color=credible)) +
+ geom_vline(xintercept = 0, linetype="dashed") +
+ scale_color_manual(values = c("black","darkred","darksalmon"),
+                   name="Credible Interval",
+                   breaks=c(0,1,2),
+                   labels=c("NA", "95%","80%")) +  
+  theme_bw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_blank(),
+        axis.title = element_text(size=15)) +
+  xlab(expression(paste(Beta,"*",10^{3}))) +
+  ylab(element_blank()) + 
+  scale_y_discrete(breaks=c("b_elev_range_s","b_median_elevation_s","b_sampling_range_s","b_mass_s", "b_elev_range_s:median_elevation_s"),
+                   labels=c("Elev. Range","Range Elev.", "Sampling Range","Mass", "Elev. Range * Range Elev.")) +
+  ggtitle("[Hb] Plasticity")
+
+p17
+```
+
+(Linck et al. *In review*)
+
+# We conclude: respiratory plasticity may facilitate elevational range expansion—even if broad elevational ranges aren't stable in the long term (Gadek et al. 2017)
+
+## Why it's unsatisfying:
+
+"However if many causes contribute to an observed pattern, none will be eliminated from consideration by a properly designed experiment...The objective of investigation in cases of this sort is not to determine the single cause of a pattern, as no such cause exists, but rather to assign relative importances to the contributions of, and interactions between, a number of processes, all known or reasonably suspected of operating to some degree" (Quinn & Dunham 1983)  
+
+# What does the evolution of elevational specialization tell us about adaptation to climate change?
+
+## Acknowledgements:  
+
+- **Collaborators and Coauthors**: Daniel Cadena, Cameron Ghalambor, Ben Freeman, Ignacio Quintero, Juan Parra 
+
+- **Funding**: NSF DBI #1907353, IOS-1457383, DEB-1754821; Banting Postdoctoral Fellowship #379958; University of British Columbia Biodiversity Research Centre Fellowship  
+
+## Reduced seasonality in tropical mountains (mostly)
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/janzen.png}
+\end{figure}
+Cadena et al. *In prep*
+
+## Possible lines of evidence
+
+- **Evolutionary rate of elevational niche shifts**
+- Responses to past climatic changes
+- Rate of upslope movement across latitude
+
+## Niche shifts take time
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/linck_tapaculos.png}
+\end{figure}
+
+(Cadena & Céspedes 2020; Linck et al. 2021)
+
+# We infer: if elevational range shifts take millions of years in tropical birds, adaptation to new climate niches also a slow process
+
+## Why it's unsatisfying: 
+
+"A theory can predict to the extent to which it can describe and explain." It is evident [the source of this quote] is a physicist; no biologist would have made such a statement. The theory of natural selection can describe and explain phenomena with considerable precision, but it cannot make reliable predictions, except through such trivial and meaningless circular statements" (Mayr 1961)
+
+## Biology progresses through incrementally better questions
+
+- How often do elevational replacements hybridize?
+- What role does genetics play in blood trait plasticity?
+- Are there other genetic constraints on elevational ranges?
+- How do rates of elevational niche evolution compare to geographic range evolution more broadly?
+- What forces lead to niche conservatism? 
+
+## Thanks!
+
+\begin{figure}
+\includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/satinbird.jpg}
+\end{figure}
+
+(Yellow-breasted satinbird, 625-2000m)  
+
+
+
+
+

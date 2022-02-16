@@ -368,7 +368,7 @@ o2_ranges <- plot_grid(p2, ranges, nrow=1)
 o2_ranges
 ```
 
-## Respiratory plasticity  
+## Respiratory "plasticity"  
 
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 library(tidyverse)
@@ -557,7 +557,7 @@ p17
 
 - **Funding**: NSF DBI #1907353, IOS-1457383, DEB-1754821; Banting Postdoctoral Fellowship #379958; University of British Columbia Biodiversity Research Centre Fellowship  
 
-## Reduced seasonality in tropical mountains (mostly)
+## Seasonality and conservatism across the globe
 
 \begin{figure}
 \includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/janzen.png}
@@ -592,13 +592,20 @@ Cadena et al. *In prep*
 - How do rates of elevational niche evolution compare to geographic range evolution more broadly?
 - What forces lead to niche conservatism? 
 
-## Thanks!
+## Thanks!  
 
 \begin{figure}
 \includegraphics[width = \linewidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/satinbird.jpg}
 \end{figure}
 
 (Yellow-breasted satinbird, 625-2000m)  
+
+## Resources  
+
+- slides & code: https://github.com/elinck/andean_range_limits/
+- website: https://elinck.org/
+- twitter: @ethanblinck
+
 
 
 

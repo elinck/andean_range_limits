@@ -256,7 +256,7 @@ blood_df_sub <- blood_df[which(blood_df$hb >= 11 &  blood_df$hb <= 24),]
 blood_df_sub <- blood_df_sub[which(blood_df_sub$hct >= 0.3 &  
                                      blood_df_sub$hct <= 0.8),]
 blood_df_sub <- blood_df_sub[which(blood_df_sub$MCHC_calculated >= 22 
-                                   & blood_df_sub$MCHC <= 42),] 
+                                   & blood_df_sub$MCHC_calculated <= 42),] 
 blood_tidy <- blood_df_sub %>% pivot_longer(c(hb, hct, MCHC_calculated), 
                                             names_to = "key", values_to = "value")
 
@@ -827,7 +827,7 @@ slope_hb_draws <- slope_hb_draws %>%
   median_hdi(.value, .width = c(.95, .80, .5)) %>%
   group_by(.variable) %>% 
   mutate(condition_mean = mean(.value)) 
-# assign credibility levels
+
 # assign credibility levels
 slope_hb_draws <- credibility_coder(slope_hb_draws)
 # turn into factor

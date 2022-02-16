@@ -7,7 +7,7 @@ date: |
 header-includes:
 - \addtobeamertemplate{title page}{\centering \includegraphics[width=1\textwidth]{/Users/ethanlinck/Dropbox/andean_range_limits/figures/aos_title.png}}{}
 output: beamer_presentation
-fontsize: 12pt
+fontsize: 12pt 
 ---
 
 ```{r setup, include=FALSE}
@@ -368,7 +368,7 @@ o2_ranges <- plot_grid(p2, ranges, nrow=1)
 o2_ranges
 ```
 
-## Respiratory "plasticity"  
+## Respiratory "plasticity" (sensitivity) 
 
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 library(tidyverse)
@@ -392,7 +392,7 @@ cyan_plasticity <- ggplot(cyan, aes(x=elevation, y=hb)) +
  xlim(1000, 4500) + 
  ylim(11, 25) + 
  ylab("[Hb]") +
- ggtitle("shallower slope, less plastic")
+ ggtitle("shallower slope, less sensitive")
 
 brun_plasticity <- ggplot(brun, aes(x=elevation, y=hb)) +
  geom_point(pch=21,stroke=1,color="black",show.legend = FALSE) +
@@ -406,7 +406,7 @@ brun_plasticity <- ggplot(brun, aes(x=elevation, y=hb)) +
  xlim(1000, 4500) +
  ylim(11, 25) + 
  ylab("[Hb]") +
- ggtitle("steeper slope, more plastic")
+ ggtitle("steeper slope, more sensitive")
 
 plasticity <- plot_grid(cyan_plasticity, brun_plasticity, nrow=1)
 ```
@@ -414,7 +414,7 @@ plasticity <- plot_grid(cyan_plasticity, brun_plasticity, nrow=1)
 plasticity
 ```
  
-## $H_{1}$: Respiratory plasticity facilitates niche breadth
+## $H_{1}$: Respiratory sensitivity facilitates niche breadth
 
 ```{r, warning=FALSE, message=FALSE, echo=FALSE}
 library(ggplot2)
@@ -433,7 +433,7 @@ p1 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
        axis.ticks = element_blank(),
        axis.title = element_text(size=10)) +
  xlab("Elevational Range Breadth") +
- ylab("Respiratory Plasticity") 
+ ylab("Respiratory Sensitivity") 
 #ggtitle("H1: Plasticity facilitates niche breadth \nGeneralists have greater respiratory plasticity \n")
 
 p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
@@ -445,7 +445,7 @@ p2 <- ggplot(data = data.frame(x = 0), mapping = aes(x = x)) +
         axis.ticks = element_blank(),
         axis.title = element_text(size=10)) +
   xlab("Elevational Range Breadth") +
-  ylab("Respiratory Plasticity") 
+  ylab("Respiratory Sensitivity") 
   #ggtitle("H2: Plasticity constrains nichee breadth \nSpecialists have greater respiratory plasticity \n")
 
 top <- plot_grid(p1, p2, nrow=1)
@@ -490,7 +490,7 @@ p5 <- ggplot(blood_df, aes(x=elevation)) + geom_histogram(binwidth = 100, color=
 plot_grid(p4, p5)
 ```
 
-## Elevational generalists are more plastic
+## Elevational generalists are more sensitive
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 library(tidybayes)
@@ -536,14 +536,14 @@ p17 <- ggplot(slope_hb_draws, aes(y = fct_rev(.variable),
   ylab(element_blank()) + 
   scale_y_discrete(breaks=c("b_elev_range_s","b_median_elevation_s","b_sampling_range_s","b_mass_s", "b_elev_range_s:median_elevation_s"),
                    labels=c("Elev. Range","Range Elev.", "Sampling Range","Mass", "Elev. Range * Range Elev.")) +
-  ggtitle("[Hb] Plasticity")
+  ggtitle("[Hb] Sensitivity")
 
 p17
 ```
 
 (Linck et al. *In review*)
 
-# We conclude: respiratory plasticity may facilitate elevational range expansion—even if broad elevational ranges aren't stable in the long term (Gadek et al. 2017)
+# We conclude: respiratory sensitivity may facilitate elevational range expansion—even if broad elevational ranges aren't stable in the long term (Gadek et al. 2017)  
 
 ## Why it's unsatisfying:
 

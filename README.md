@@ -53,5 +53,5 @@ in `scripts/` subdirectory:
 
 `06_seminar.Rmd`:  beamer / Rmarkdown presentation for UNM / UM seminars  
 
-`06_seminar.pdf`: pdf version off the above 
+`06_seminar.pdf`: pdf version off the above   
 

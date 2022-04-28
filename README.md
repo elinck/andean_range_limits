@@ -55,3 +55,7 @@ in `scripts/` subdirectory:
 
 `06_seminar.pdf`: pdf version off the above   
 
+`07_uniandes.Rmd`:  beamer / Rmarkdown presentation for Universidad de los Andes talk  
+
+`07_seminar.pdf`: pdf version off the above   
+

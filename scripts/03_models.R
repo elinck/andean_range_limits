@@ -29,6 +29,12 @@ variance.tree <- ape::read.tree("~/Dropbox/andean_range_limits/data/blood_varian
 # load variance data
 variance_df  <- read.csv("~/Dropbox/andean_range_limits/data/blood_variances.csv")
 
+# load subset variance data
+variance_subset_df  <- read.csv("~/Dropbox/andean_range_limits/data/blood_variances_subset.csv")
+
+# load subset variance tree
+variance_subset.tree <- ape::read.tree("~/Dropbox/andean_range_limits/data/blood_variances_subset.tre")
+
 # check order of magnitude of variables
 head(slope_df)
 
@@ -615,16 +621,32 @@ variance_df <-
                          variance_hct = variance_hct*1e1,
                          variance_mchc = variance_mchc*1e1)
 
+# make variables same order of magnitude
+variance_subset_df <- 
+  variance_subset_df %>% mutate(variance_hb = variance_hb*1e1,
+                         variance_hct = variance_hct*1e1,
+                         variance_mchc = variance_mchc*1e1)
+
 # standardize predictors
 variance_df <- 
   variance_df %>% mutate(bin_elevation_s = (bin_elevation - mean(bin_elevation)) / sd(bin_elevation),
                          edge_distance_s = (edge_distance - mean(edge_distance)) / sd(edge_distance))
 
+# standardize predictors
+variance_subset_df <- 
+  variance_subset_df %>% mutate(bin_elevation_s = (bin_elevation - mean(bin_elevation)) / sd(bin_elevation),
+                         edge_distance_s = (edge_distance - mean(edge_distance)) / sd(edge_distance))
+
+
 # add "phylo" variable
 variance_df$phylo <- variance_df$species
 
+# add "phylo" variable
+variance_subset_df$phylo <- variance_subset_df$species
+
 # get covariance matrix
 A <- ape::vcv.phylo(variance.tree)
+As <- ape::vcv.phylo(variance_subset.tree)
 
 # write transformed variance
 write.csv(variance_df, "~/Dropbox/andean_range_limits/data/blood_variance_m.csv")
@@ -662,6 +684,42 @@ variance_hb_1 <-
 
 # pairwise plots
 #pairs(variance_hb_1)
+
+# new initial values
+inits      <- list(Yl = variance_subset_df$variance_hb)
+inits_list <- list(inits, inits)
+
+# fit full model with phylogeny, subset data
+variance_subset_hb_1 <- 
+  brm(data = variance_subset_df, family = lognormal(),
+      variance_hb ~ 1 + bin_elevation_s + edge_distance_s + bin_elevation_s*edge_distance_s + (1 | gr(phylo, cov=As)),
+      data2 = list(As = As),
+      inits = inits_list,
+      prior = c(
+        prior(normal(0, 0.5), "b", coef="bin_elevation_s"),
+        prior(normal(0, 0.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 0.5), "b", coef="bin_elevation_s:edge_distance_s"),
+        prior(normal(0, 0.5), "Intercept"),
+        prior(normal(0, 0.5), "sd"),
+        prior(cauchy(0, 0.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(variance_subset_hb_1, nsamples = 50) + xlim(0, 5)
+
+# trace and density plots
+#plot(variance_subset_hb_1)
+
+# pairwise plots
+#pairs(variance_subset_hb_1)
+
+# back to original initial values
+inits      <- list(Yl = variance_df$variance_hb)
+inits_list <- list(inits, inits)
 
 # fit full model without phylogeny
 variance_hb_2 <- 
@@ -861,6 +919,42 @@ variance_hct_1 <-
 
 # pairwise plots
 #pairs(variance_hct_1)
+
+# new initial values
+inits      <- list(Yl = variance_subset_df$variance_hct)
+inits_list <- list(inits, inits)
+
+# fit full model with phylogeny, subset data
+variance_subset_hct_1 <- 
+  brm(data = variance_subset_df, family = lognormal(),
+      variance_hct ~ 1 + bin_elevation_s + edge_distance_s + bin_elevation_s*edge_distance_s + (1 | gr(phylo, cov=As)),
+      data2 = list(As = As),
+      inits = inits_list,
+      prior = c(
+        prior(normal(0, 0.5), "b", coef="bin_elevation_s"),
+        prior(normal(0, 0.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 0.5), "b", coef="bin_elevation_s:edge_distance_s"),
+        prior(normal(0, 0.5), "Intercept"),
+        prior(normal(0, 0.5), "sd"),
+        prior(cauchy(0, 0.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(variance_hb_1, nsamples = 50) + xlim(0, 5)
+
+# trace and density plots
+#plot(variance_hb_1)
+
+# pairwise plots
+#pairs(variance_hb_1)
+
+# back to old values
+inits      <- list(Yl = variance_df$variance_hct)
+inits_list <- list(inits, inits)
 
 # fit full model without phylogeny
 variance_hct_2 <- 
@@ -1069,6 +1163,42 @@ variance_mchc_1 <-
 
 # pairwise plots
 #pairs(variance_mchc_1)
+
+# here we specify the initial (i.e., starting) values
+inits      <- list(Yl = variance_subset_df$variance_mchc)
+inits_list <- list(inits, inits)
+
+# fit full model with phylogeny
+variance_subset_mchc_1 <- 
+  brm(data = variance_subset_df, family = lognormal(),
+      variance_mchc ~ 1 + bin_elevation_s + edge_distance_s + bin_elevation_s*edge_distance_s + (1 | gr(phylo, cov=As)),
+      data2 = list(As = As),
+      inits = inits_list,
+      prior = c(
+        prior(normal(0, 0.5), "b", coef="bin_elevation_s"),
+        prior(normal(0, 0.5), "b", coef="edge_distance_s"),
+        prior(normal(0, 0.5), "b", coef="bin_elevation_s:edge_distance_s"),
+        prior(normal(0, 0.5), "Intercept"),
+        prior(normal(0, 0.5), "sd"),
+        prior(cauchy(0, 0.5), "sigma")),
+      iter = 10000, warmup = 5000, cores = 2, chains = 2,
+      control = list(adapt_delta = 0.99,
+                     max_treedepth = 12),
+      save_mevars = TRUE
+  )
+
+# pp check
+#pp_check(variance_mchc_1, nsamples = 50) + xlim(0, 5)
+
+# trace and density plots
+#plot(variance_mchc_1)
+
+# pairwise plots
+#pairs(variance_mchc_1)
+
+# here we specify the initial (i.e., starting) values
+inits      <- list(Yl = variance_df$variance_mchc)
+inits_list <- list(inits, inits)
 
 # fit full model without phylogeny
 variance_mchc_2 <- 

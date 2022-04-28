@@ -401,6 +401,10 @@ We're now going to apply a final set of filters to the data (using the function 
 blood_df_slope <- outliers_limits(blood_df_stotz_pass, min_sample=2, min_limit=2, 200)
 length(unique(blood_df_slope$species)) # number of unique species
 nrow(blood_df_slope) # number of unique records
+table(blood_df_slope$species) %>% min() # minimum sample size
+table(blood_df_slope$species) %>% max() # maximum sample size
+samplevec <- table(blood_df_slope$species) %>% as.vector() # get vector of sample sizes
+length(samplevec[samplevec < 5]) # number of species with sample size n=4
 ```
 
 Let's visualize these slope data (printing large .pdfs elsewhere):  
@@ -488,7 +492,7 @@ head(slope_df)
 length(unique(slope_df$species))
 ```
 
-We'll create a separate dataframe of variance values, using data from the 100m elevational bin with the most observations for any given species with the `blood_variance()` function: 
+We'll create a separate dataframe of variance values, using data from the 100m elevational bin with the most observations for any given species with the `blood_variance()` function. In order to address reviewer concerns about intraspecific versus interspecific comparisons, we'll create a secondary dataset including only species with 2 or more elevational bins represented. 
 
 ```{r,message=FALSE, warning=FALSE}
 # run function
@@ -501,8 +505,19 @@ head(variance_df)
 # print number of records
 nrow(variance_df)
 
+# evaluate number of species with more than one bin
+table(variance_df$species) %>% as.data.frame() %>% subset(Freq >= 2) %>% nrow()
+
+# subset down to only these
+temptab <- table(variance_df$species) %>% as.data.frame() %>% subset(Freq >= 2)
+incsp <- temptab$Var1 %>% as.vector()
+variance_subset_df <- variance_df[which(variance_df$species %in% incsp),]
+
 # print number of species 
 length(unique(variance_df$species))
+
+# print number of species in subset
+length(unique(variance_subset_df$species))
 ```
 
 Next, we'll load the Jetz supertree so we can control for phylogeny, and then subset the tree down to only those species we have slope data for: 
@@ -523,7 +538,7 @@ slope_df[grep("Orochelidon_murina", slope_df$species),]$species <- "Notiochelido
 slope_df[grep("Spinus_magellanicus", slope_df$species),]$species <- "Carduelis_magellanica"
 slope_df[grep("Spinus_uropygialis", slope_df$species),]$species <- "Carduelis_uropygialis"
 slope_df[grep("Spinus_crassirostris", slope_df$species),]$species <- "Carduelis_crassirostris"
-#slope_df[grep("Systellura_longirostris", slope_df$species),]$species <- "Caprimulgus_longirostris"
+# slope_df[grep("Systellura_longirostris", slope_df$species),]$species <- "Caprimulgus_longirostris"
 slope_df[grep("Aglaiocercus_kingii", slope_df$species),]$species <- "Aglaiocercus_kingi"
 # slope_df[grep("Myiothlypis_luteoviridis", slope_df$species),]$species <- "Basileuterus_luteoviridis"
 slope_df[grep("Myiothlypis_nigrocristata", slope_df$species),]$species <- "Basileuterus_nigrocristatus"
@@ -534,6 +549,8 @@ slope_df[grep("Thamnophilus_bernardi", slope_df$species),]$species <- "Sakesphor
 slope_df[grep("Cercomacroides_serva", slope_df$species),]$species <- "Cercomacra_serva"
 # slope_df[grep("Chloropipo_unicolor", slope_df$species),]$species <- "Xenopipo_unicolor"
 # slope_df[grep("Orochelidon_murina", slope_df$species),]$species <- "Pygochelidon_murina"
+# slope_df[grep("Pheugopedius_eisenmanni", slope_df$species),]$species <- "Thryothorus_eisenmanni"
+#  slope_df[grep("Asthenes_helleri", slope_df$species),]$species <- "Schizoeaca_helleri"
 
 # prune tree
 slope.tree <- keep.tip(supertree, slope_df$species)
@@ -543,7 +560,7 @@ write.csv(slope_df, file="~/Dropbox/andean_range_limits/data/blood_slopes.csv")
 write.tree(slope.tree, file="~/Dropbox/andean_range_limits/data/blood_slope.tre")
 ```
 
-And then the same thing for our variance data: 
+And then the same thing for our variance data (both the full dataset and the subset):
 
 ```{r,message=FALSE, warning=FALSE}
 variance_df$species <- sub(" ", "_", variance_df$species) 
@@ -559,12 +576,23 @@ variance_df[grep("Thamnophilus_bernardi", variance_df$species),]$species <- "Sak
 # variance_df[grep("Orochelidon_murina", variance_df$species),]$species <- "Notiochelidon_murina"
 # variance_df[grep("Isleria_hauxwelli", variance_df$species),]$species <- "Myrmotherula_hauxwelli"
 
-# prune tree
+# prune tree for subset data
 variance.tree <- keep.tip(supertree, variance_df$species)
 
 # write to files
 write.csv(variance_df, file="~/Dropbox/andean_range_limits/data/blood_variances.csv")
 write.tree(variance.tree, file="~/Dropbox/andean_range_limits/data/blood_variances.tre")
+
+variance_subset_df$species <- sub(" ", "_", variance_subset_df$species) 
+variance_subset_df[grep("Spinus_magellanicus", variance_subset_df$species),]$species <- "Carduelis_magellanica"
+variance_subset_df[grep("Pipraeidea_bonariensis", variance_subset_df$species),]$species <- "Thraupis_bonariensis"
+
+# prune tree
+variance_subset.tree <- keep.tip(supertree, variance_subset_df$species)
+
+# write to files
+write.csv(variance_subset_df, file="~/Dropbox/andean_range_limits/data/blood_variances_subset.csv")
+write.tree(variance.tree, file="~/Dropbox/andean_range_limits/data/blood_variances_subset.tre")
 ```
 
 Before moving on to model fitting, let's visualize the distribution of blood parameter slopes and variances—a key descriptive contribution of the study:
@@ -1237,12 +1265,16 @@ slope.tree <- read.tree("~/Dropbox/andean_range_limits/data/blood_slope.tre")
 slope_df_original  <- read.csv("~/Dropbox/andean_range_limits/data/blood_slopes.csv")
 # subset
 slope_df <- cbind.data.frame(slope_df_original$species, slope_df_original$slope_hb)
+
 # ready data for plotting
 plot_data <- tibble(
   node  = slope_df_original$species,
   median = slope_df_original$median_elevation,
   min = slope_df_original$elev_min,
-  max = slope_df_original$elev_max)
+  max = slope_df_original$elev_max,
+  color = slope_df_original$slope_hb)
+
+
 # get base tree with annotated slope data
 p29 <- ggtree(slope.tree) %<+% slope_df
 # add tips; hilight clades
@@ -1259,6 +1291,7 @@ p32 <- facet_plot(p31,
            data = plot_data,
            geom = geom_pointrangeh,
            mapping = aes(xmin=min, 
+                         color=color,
                          xmax=max, 
                          x=median,
                          width=0.5))
